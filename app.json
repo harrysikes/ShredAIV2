@@ -35,6 +35,9 @@
           "cameraPermission": "Allow ShredAI to access your camera to analyze body composition."
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "tsconfigPaths": true
+    }
   }
 }
