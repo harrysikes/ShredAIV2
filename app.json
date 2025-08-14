@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "ShredAI V2",
+    "slug": "shredai-v2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E3DAC9"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.shredai.v2",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to analyze body composition for accurate body fat percentage calculations.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to save and analyze body composition photos."
+      }
+    },
+    "android": {
+      "enabled": false
+    },
+    "web": {
+      "enabled": false
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ShredAI to access your camera to analyze body composition."
+        }
+      ]
+    ]
+  }
+}
