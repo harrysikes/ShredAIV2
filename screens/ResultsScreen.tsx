@@ -176,7 +176,7 @@ export default function ResultsScreen() {
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Weight:</Text>
           <Text style={styles.summaryValue}>
-            {surveyData.weight ? `${surveyData.weight.value} ${surveyData.weight.unit}` : 'Not specified'}
+            {surveyData.weight ? `${surveyData.weight.value} lbs (${Math.round(surveyData.weight.value * 0.453592 * 10) / 10} kg)` : 'Not specified'}
           </Text>
         </View>
         <View style={styles.summaryRow}>

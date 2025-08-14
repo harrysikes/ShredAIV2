@@ -8,8 +8,7 @@ export interface SurveyData {
     inches: number;
   } | null;
   weight: {
-    value: number;
-    unit: 'kg' | 'lbs';
+    value: number; // Always in pounds
   } | null;
   exerciseFrequency: '2-3 days' | '3-4 days' | '5-6 days' | '7 days' | null;
   workoutGoal: 'gain muscle' | 'lose fat' | 'improve endurance' | null;

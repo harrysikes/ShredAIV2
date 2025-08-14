@@ -210,62 +210,46 @@ export default function SurveyScreen() {
     </View>
   );
 
-  const renderWeightStep = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.weightContainer}>
-        <View style={styles.weightInputContainer}>
-          <Text style={styles.weightLabel}>Weight</Text>
-          <Text style={styles.weightValue}>
-            {surveyData.weight?.value || 0} {surveyData.weight?.unit || 'lbs'}
-          </Text>
-        </View>
-        <View style={styles.weightButtons}>
-          <TouchableOpacity
-            style={[
-              styles.weightUnitButton,
-              surveyData.weight?.unit === 'lbs' && styles.weightUnitButtonSelected,
-            ]}
-            onPress={() => setSurveyData({ weight: { value: surveyData.weight?.value || 150, unit: 'lbs' } })}
-          >
-            <Text style={styles.weightUnitButtonText}>lbs</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.weightUnitButton,
-              surveyData.weight?.unit === 'kg' && styles.weightUnitButtonSelected,
-            ]}
-            onPress={() => setSurveyData({ weight: { value: surveyData.weight?.value || 68, unit: 'kg' } })}
-          >
-            <Text style={styles.weightUnitButtonText}>kg</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.weightAdjustment}>
-          <TouchableOpacity
-            style={styles.weightAdjustButton}
-            onPress={() => {
-              const currentValue = surveyData.weight?.value || 150;
-              const unit = surveyData.weight?.unit || 'lbs';
-              const increment = unit === 'lbs' ? 5 : 2;
-              setSurveyData({ weight: { value: currentValue + increment, unit } });
-            }}
-          >
-            <Text style={styles.weightAdjustButtonText}>+</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.weightAdjustButton}
-            onPress={() => {
-              const currentValue = surveyData.weight?.value || 150;
-              const unit = surveyData.weight?.unit || 'lbs';
-              const decrement = unit === 'lbs' ? 5 : 2;
-              setSurveyData({ weight: { value: Math.max(0, currentValue - decrement), unit } });
-            }}
-          >
-            <Text style={styles.weightAdjustButtonText}>-</Text>
-          </TouchableOpacity>
+  const renderWeightStep = () => {
+    const weightInLbs = surveyData.weight?.value || 150;
+    const weightInKg = Math.round(weightInLbs * 0.453592 * 10) / 10;
+    
+    return (
+      <View style={styles.stepContainer}>
+        <View style={styles.weightContainer}>
+          <View style={styles.weightInputContainer}>
+            <Text style={styles.weightLabel}>Weight</Text>
+            <Text style={styles.weightValue}>
+              {weightInLbs} lbs
+            </Text>
+            <Text style={styles.weightConversion}>
+              ({weightInKg} kg)
+            </Text>
+          </View>
+          <View style={styles.weightAdjustment}>
+            <TouchableOpacity
+              style={styles.weightAdjustButton}
+              onPress={() => {
+                const newWeight = weightInLbs + 5;
+                setSurveyData({ weight: { value: newWeight, unit: 'lbs' } });
+              }}
+            >
+              <Text style={styles.weightAdjustButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.weightAdjustButton}
+              onPress={() => {
+                const newWeight = Math.max(0, weightInLbs - 5);
+                setSurveyData({ weight: { value: newWeight, unit: 'lbs' } });
+              }}
+            >
+              <Text style={styles.weightAdjustButtonText}>-</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderExerciseFrequencyStep = () => (
     <View style={styles.stepContainer}>
@@ -529,6 +513,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: '#000000',
+  },
+  weightConversion: {
+    fontSize: 16,
+    color: '#000000',
+    opacity: 0.6,
+    marginTop: 8,
+    textAlign: 'center',
   },
   weightButtons: {
     flexDirection: 'row',

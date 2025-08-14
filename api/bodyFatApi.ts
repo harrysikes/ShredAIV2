@@ -75,7 +75,7 @@ export const calculateBodyFat = async (
         sex: surveyData.sex,
         age,
         height: surveyData.height,
-        weight: surveyData.weight,
+        weight: { value: surveyData.weight?.value || 150 }, // Always in pounds
         exerciseFrequency: surveyData.exerciseFrequency || '2-3 days',
         workoutGoal: surveyData.workoutGoal || 'improve endurance',
       },

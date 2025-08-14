@@ -4,7 +4,7 @@ export interface BodyCompositionRequest {
     sex: 'male' | 'female';
     age: number;
     height: { feet: number; inches: number };
-    weight: { value: number; unit: 'kg' | 'lbs' };
+    weight: { value: number; // Always in pounds
     exerciseFrequency: string;
     workoutGoal: string;
   };
@@ -70,7 +70,7 @@ export const analyzeBodyComposition = async (
     
     // Calculate BMI and body metrics
     const heightInMeters = (height.feet * 12 + height.inches) * 0.0254;
-    const weightInKg = weight.unit === 'lbs' ? weight.value * 0.453592 : weight.value;
+    const weightInKg = weight.value * 0.453592; // Convert pounds to kilograms
     const bmi = weightInKg / (heightInMeters * heightInMeters);
     
     // Analyze muscle visibility based on fitness level and goals
