@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Alert,
 } from 'react-native';
@@ -13,6 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import { detectHuman, HumanDetectionResponse } from '../api/humanDetectionApi';
+import { Button } from '../components/ui';
 
 type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Camera'>;
 
@@ -162,123 +162,129 @@ export default function CameraScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>No access to camera</Text>
-        <TouchableOpacity
-          style={styles.button}
+        <Button
+          variant="outline"
           onPress={() => navigation.goBack()}
+          style={styles.button}
         >
-          <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
+          Go Back
+        </Button>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={cameraType} ref={cameraRef}>
-        <View style={styles.overlay}>
-          {/* Visual guide overlay */}
-          <View style={styles.guideOverlay}>
-            <View style={styles.guideFrame}>
-              <View style={styles.guideCorner} />
-              <View style={[styles.guideCorner, styles.guideCornerTopRight]} />
-              <View style={[styles.guideCorner, styles.guideCornerBottomLeft]} />
-              <View style={[styles.guideCorner, styles.guideCornerBottomRight]} />
-            </View>
-          </View>
-
-          {/* Top controls */}
-          <View style={styles.topControls}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.flipButton}
-              onPress={flipCamera}
-            >
-              <Text style={styles.flipButtonText}>🔄</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Center countdown */}
-          {isCountingDown && (
-            <View style={styles.countdownContainer}>
-              <Animated.Text
-                style={[
-                  styles.countdownText,
-                  {
-                    transform: [{ scale: countdownAnim }],
-                  },
-                ]}
-              >
-                {countdown}
-              </Animated.Text>
-            </View>
-          )}
-
-          {/* Human detection status */}
-          {humanDetected === false && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>❌ No person detected</Text>
-              <Text style={styles.errorSubtext}>{detectionMessage || 'Please reposition and retake'}</Text>
-            </View>
-          )}
-
-          {/* Success indicator */}
-          {humanDetected === true && (
-            <View style={styles.successContainer}>
-              <Text style={styles.successText}>✅ Person detected!</Text>
-              <Text style={styles.successSubtext}>Processing your photo...</Text>
-            </View>
-          )}
-
-          {/* Analysis indicator */}
-          {isAnalyzing && (
-            <View style={styles.analyzingContainer}>
-              <Text style={styles.analyzingText}>Analyzing photo...</Text>
-              <Text style={styles.analyzingSubtext}>Checking for human presence</Text>
-            </View>
-          )}
-
-          {/* Instructions */}
-          <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsText}>
-              {isCountingDown
-                ? `Photo will be taken in ${countdown} seconds`
-                : humanDetected === false
-                ? 'Position yourself clearly in the frame'
-                : 'Position yourself in the frame and tap the button below'}
-            </Text>
-            
-            {/* Positioning tips */}
-            {!isCountingDown && humanDetected === null && (
-              <View style={styles.tipsContainer}>
-                <Text style={styles.tipsTitle}>📸 Positioning Tips:</Text>
-                <Text style={styles.tipText}>• Stand 3-6 feet from camera</Text>
-                <Text style={styles.tipText}>• Ensure good lighting</Text>
-                <Text style={styles.tipText}>• Show your upper body clearly</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Bottom shutter button */}
-          <View style={styles.bottomControls}>
-            <TouchableOpacity
-              style={[
-                styles.shutterButton,
-                (isCountingDown || isAnalyzing) && styles.shutterButtonDisabled,
-              ]}
-              onPress={startCountdown}
-              disabled={isCountingDown || isAnalyzing}
-            >
-              <View style={styles.shutterButtonInner} />
-            </TouchableOpacity>
+      <CameraView style={styles.camera} facing={cameraType} ref={cameraRef} />
+      
+      {/* Overlay on top of camera */}
+      <View style={styles.overlay}>
+        {/* Visual guide overlay */}
+        <View style={styles.guideOverlay}>
+          <View style={styles.guideFrame}>
+            <View style={styles.guideCorner} />
+            <View style={[styles.guideCorner, styles.guideCornerTopRight]} />
+            <View style={[styles.guideCorner, styles.guideCornerBottomLeft]} />
+            <View style={[styles.guideCorner, styles.guideCornerBottomRight]} />
           </View>
         </View>
-      </CameraView>
+
+        {/* Top controls */}
+        <View style={styles.topControls}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={() => navigation.goBack()}
+            style={styles.closeButton}
+          >
+            ✕
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onPress={flipCamera}
+            style={styles.flipButton}
+          >
+            🔄
+          </Button>
+        </View>
+
+        {/* Center countdown */}
+        {isCountingDown && (
+          <View style={styles.countdownContainer}>
+            <Animated.Text
+              style={[
+                styles.countdownText,
+                {
+                  transform: [{ scale: countdownAnim }],
+                },
+              ]}
+            >
+              {countdown}
+            </Animated.Text>
+          </View>
+        )}
+
+        {/* Human detection status */}
+        {humanDetected === false && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>❌ No person detected</Text>
+            <Text style={styles.errorSubtext}>{detectionMessage || 'Please reposition and retake'}</Text>
+          </View>
+        )}
+
+        {/* Success indicator */}
+        {humanDetected === true && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successText}>✅ Person detected!</Text>
+            <Text style={styles.successSubtext}>Processing your photo...</Text>
+          </View>
+        )}
+
+        {/* Analysis indicator */}
+        {isAnalyzing && (
+          <View style={styles.analyzingContainer}>
+            <Text style={styles.analyzingText}>Analyzing photo...</Text>
+            <Text style={styles.analyzingSubtext}>Checking for human presence</Text>
+          </View>
+        )}
+
+        {/* Instructions */}
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsText}>
+            {isCountingDown
+              ? `Photo will be taken in ${countdown} seconds`
+              : humanDetected === false
+              ? 'Position yourself clearly in the frame'
+              : 'Position yourself in the frame and tap the button below'}
+          </Text>
+          
+          {/* Positioning tips */}
+          {!isCountingDown && humanDetected === null && (
+            <View style={styles.tipsContainer}>
+              <Text style={styles.tipsTitle}>📸 Positioning Tips:</Text>
+              <Text style={styles.tipText}>• Stand 3-6 feet from camera</Text>
+              <Text style={styles.tipText}>• Ensure good lighting</Text>
+              <Text style={styles.tipText}>• Show your upper body clearly</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Bottom shutter button */}
+        <View style={styles.bottomControls}>
+          <Button
+            onPress={startCountdown}
+            disabled={isCountingDown || isAnalyzing}
+            style={[
+              styles.shutterButton,
+              (isCountingDown || isAnalyzing) && styles.shutterButtonDisabled,
+            ]}
+          >
+            <View style={styles.shutterButtonInner} />
+          </Button>
+        </View>
+      </View>
     </View>
   );
 }
@@ -292,7 +298,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   guideOverlay: {

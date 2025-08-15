@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import { generateWorkoutPlan } from '../api/workoutPlanGenerator';
+import { Button } from '../components/ui';
 
 type ResultsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Results'>;
 
@@ -79,9 +79,9 @@ export default function ResultsScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>No results available</Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
+        <Button variant="outline" onPress={() => navigation.goBack()}>
+          Go Back
+        </Button>
       </View>
     );
   }
@@ -236,27 +236,32 @@ export default function ResultsScreen() {
           <Text style={styles.upgradeDescription}>
             Subscribe to get your personalized workout routine based on your goals and fitness level.
           </Text>
-          <TouchableOpacity
-            style={styles.upgradeButton}
+          <Button
             onPress={() => navigation.navigate('Paywall')}
+            style={styles.upgradeButton}
           >
-            <Text style={styles.upgradeButtonText}>Subscribe Now</Text>
-          </TouchableOpacity>
+            Subscribe Now
+          </Button>
         </View>
       )}
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.startOverButton} onPress={handleStartOver}>
-          <Text style={styles.startOverButtonText}>Start Over</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.shareButton}
-          onPress={() => Alert.alert('Share', 'Share functionality would go here')}
+        <Button 
+          variant="outline"
+          onPress={handleStartOver}
+          style={styles.startOverButton}
         >
-          <Text style={styles.shareButtonText}>Share Results</Text>
-        </TouchableOpacity>
+          Start Over
+        </Button>
+        
+        <Button 
+          variant="ghost"
+          onPress={() => Alert.alert('Share', 'Share functionality would go here')}
+          style={styles.shareButton}
+        >
+          Share Results
+        </Button>
       </View>
 
       {/* Footer */}

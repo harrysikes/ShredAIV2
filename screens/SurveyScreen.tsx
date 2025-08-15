@@ -3,17 +3,21 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import ProgressBar from '../components/ProgressBar';
+import { Button, Card, CardContent } from '../components/ui';
 
 type SurveyScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Survey'>;
 
@@ -57,6 +61,13 @@ export default function SurveyScreen() {
   const { surveyData, currentStep, setSurveyData, setCurrentStep } = useSurveyStore();
   const [slideAnim] = useState(new Animated.Value(0));
   const [fadeAnim] = useState(new Animated.Value(1));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(surveyData.dateOfBirth?.getFullYear() || new Date().getFullYear() - 25);
+  const [selectedMonth, setSelectedMonth] = useState(surveyData.dateOfBirth?.getMonth() || 0);
+  const [selectedDay, setSelectedDay] = useState(surveyData.dateOfBirth?.getDate() || 1);
+  const [showHeightPicker, setShowHeightPicker] = useState(false);
+  const [selectedFeet, setSelectedFeet] = useState(surveyData.height?.feet || 5);
+  const [selectedInches, setSelectedInches] = useState(surveyData.height?.inches || 0);
 
   useEffect(() => {
     Animated.parallel([
@@ -72,6 +83,23 @@ export default function SurveyScreen() {
       }),
     ]).start();
   }, [currentStep, slideAnim, fadeAnim]);
+
+  // Update selected date values when survey data changes
+  useEffect(() => {
+    if (surveyData.dateOfBirth) {
+      setSelectedYear(surveyData.dateOfBirth.getFullYear());
+      setSelectedMonth(surveyData.dateOfBirth.getMonth());
+      setSelectedDay(surveyData.dateOfBirth.getDate());
+    }
+  }, [surveyData.dateOfBirth]);
+
+  // Update selected height values when survey data changes
+  useEffect(() => {
+    if (surveyData.height) {
+      setSelectedFeet(surveyData.height.feet);
+      setSelectedInches(surveyData.height.inches);
+    }
+  }, [surveyData.height]);
 
   const nextStep = () => {
     if (currentStep < SURVEY_STEPS.length - 1) {
@@ -97,118 +125,227 @@ export default function SurveyScreen() {
 
   const renderSexStep = () => (
     <View style={styles.stepContainer}>
-      <TouchableOpacity
-        style={[
-          styles.optionButton,
-          surveyData.sex === 'male' && styles.optionButtonSelected,
-        ]}
+      <Button
+        variant={surveyData.sex === 'male' ? 'selected' : 'outline'}
         onPress={() => setSurveyData({ sex: 'male' })}
+        style={styles.optionButton}
       >
-        <Text
-          style={[
-            styles.optionButtonText,
-            surveyData.sex === 'male' && styles.optionButtonTextSelected,
-          ]}
-        >
-          Male
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[
-          styles.optionButton,
-          surveyData.sex === 'female' && styles.optionButtonSelected,
-        ]}
+        Male
+      </Button>
+      <Button
+        variant={surveyData.sex === 'female' ? 'selected' : 'outline'}
         onPress={() => setSurveyData({ sex: 'female' })}
+        style={styles.optionButton}
       >
-        <Text
-          style={[
-            styles.optionButtonText,
-            surveyData.sex === 'female' && styles.optionButtonTextSelected,
-          ]}
-        >
-          Female
-        </Text>
-      </TouchableOpacity>
+        Female
+      </Button>
     </View>
   );
 
-  const renderDateOfBirthStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.datePickerLabel}>Select your birth date:</Text>
-      <View style={styles.datePickerContainer}>
-        <Text style={styles.dateDisplay}>
-          {surveyData.dateOfBirth
-            ? surveyData.dateOfBirth.toLocaleDateString()
-            : 'Not selected'}
-        </Text>
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => {
-            // For now, just set a default date
-            // In a real app, you'd use a proper date picker
-            setSurveyData({ dateOfBirth: new Date('1990-01-01') });
-          }}
-        >
-          <Text style={styles.datePickerButtonText}>Select Date</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderDateOfBirthStep = () => {
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  const renderHeightStep = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.heightContainer}>
-        <View style={styles.heightPicker}>
-          <Text style={styles.heightLabel}>Feet</Text>
-          <View style={styles.heightWheel}>
-            {Array.from({ length: 8 }, (_, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.heightOption,
-                  surveyData.height?.feet === i + 1 && styles.heightOptionSelected,
-                ]}
-                onPress={() => setSurveyData({ height: { feet: i + 1, inches: surveyData.height?.inches || 0 } })}
-              >
-                <Text
-                  style={[
-                    styles.heightOptionText,
-                    surveyData.height?.feet === i + 1 && styles.heightOptionTextSelected,
-                  ]}
+    const handleDateConfirm = () => {
+      const newDate = new Date(selectedYear, selectedMonth, selectedDay);
+      setSurveyData({ dateOfBirth: newDate });
+      setShowDatePicker(false);
+    };
+
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.datePickerLabel}>Select your birth date:</Text>
+        <View style={styles.datePickerContainer}>
+          <Text style={styles.dateDisplay}>
+            {surveyData.dateOfBirth
+              ? surveyData.dateOfBirth.toLocaleDateString()
+              : 'Not selected'}
+          </Text>
+          
+          {!showDatePicker ? (
+            <Button
+              variant="outline"
+              onPress={() => setShowDatePicker(true)}
+            >
+              Select Date
+            </Button>
+          ) : (
+            <View style={styles.dateScrollerContainer}>
+              <View style={styles.dateScrollerRow}>
+                <View style={styles.dateScrollerColumn}>
+                  <Text style={styles.dateScrollerLabel}>Month</Text>
+                  <ScrollView style={styles.dateScroller} showsVerticalScrollIndicator={false}>
+                    {months.map((month, index) => (
+                      <TouchableOpacity
+                        key={month}
+                        style={[
+                          styles.dateScrollerOption,
+                          selectedMonth === index && styles.dateScrollerOptionSelected
+                        ]}
+                        onPress={() => setSelectedMonth(index)}
+                      >
+                        <Text style={[
+                          styles.dateScrollerOptionText,
+                          selectedMonth === index && styles.dateScrollerOptionTextSelected
+                        ]}>
+                          {month}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                
+                <View style={styles.dateScrollerColumn}>
+                  <Text style={styles.dateScrollerLabel}>Day</Text>
+                  <ScrollView style={styles.dateScroller} showsVerticalScrollIndicator={false}>
+                    {days.map((day) => (
+                      <TouchableOpacity
+                        key={day}
+                        style={[
+                          styles.dateScrollerOption,
+                          selectedDay === day && styles.dateScrollerOptionSelected
+                        ]}
+                        onPress={() => setSelectedDay(day)}
+                      >
+                        <Text style={[
+                          styles.dateScrollerOptionText,
+                          selectedDay === day && styles.dateScrollerOptionTextSelected
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                
+                <View style={styles.dateScrollerColumn}>
+                  <Text style={styles.dateScrollerLabel}>Year</Text>
+                  <ScrollView style={styles.dateScroller} showsVerticalScrollIndicator={false}>
+                    {years.map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        style={[
+                          styles.dateScrollerOption,
+                          selectedYear === year && styles.dateScrollerOptionSelected
+                        ]}
+                        onPress={() => setSelectedYear(year)}
+                      >
+                        <Text style={[
+                          styles.dateScrollerOptionText,
+                          selectedYear === year && styles.dateScrollerOptionTextSelected
+                        ]}>
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+              
+              <View style={styles.dateScrollerActions}>
+                <Button
+                  variant="outline"
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.dateScrollerButton}
                 >
-                  {i + 1}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <View style={styles.heightPicker}>
-          <Text style={styles.heightLabel}>Inches</Text>
-          <View style={styles.heightWheel}>
-            {Array.from({ length: 12 }, (_, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.heightOption,
-                  surveyData.height?.inches === i && styles.heightOptionSelected,
-                ]}
-                onPress={() => setSurveyData({ height: { feet: surveyData.height?.feet || 5, inches: i } })}
-              >
-                <Text
-                  style={[
-                    styles.heightOptionText,
-                    surveyData.height?.inches === i && styles.heightOptionTextSelected,
-                  ]}
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onPress={handleDateConfirm}
+                  style={styles.dateScrollerButton}
                 >
-                  {i}"
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  Confirm
+                </Button>
+              </View>
+            </View>
+          )}
         </View>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const renderHeightStep = () => {
+    const feet = Array.from({ length: 8 }, (_, i) => i + 1);
+    const inches = Array.from({ length: 12 }, (_, i) => i);
+
+    const handleHeightConfirm = () => {
+      setSurveyData({ height: { feet: selectedFeet, inches: selectedInches } });
+      setShowHeightPicker(false);
+    };
+
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.heightLabel}>Select your height:</Text>
+        <View style={styles.heightContainer}>
+          <Text style={styles.heightDisplay}>
+            {surveyData.height ? `${surveyData.height.feet}' ${surveyData.height.inches}"` : 'Not selected'}
+          </Text>
+          
+          {!showHeightPicker ? (
+            <Button
+              variant="outline"
+              onPress={() => setShowHeightPicker(true)}
+            >
+              Select Height
+            </Button>
+          ) : (
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Feet</Text>
+                  <Picker
+                    selectedValue={selectedFeet}
+                    onValueChange={(itemValue: number) => setSelectedFeet(itemValue)}
+                    style={styles.picker}
+                  >
+                    {feet.map((foot) => (
+                      <Picker.Item key={foot} label={`${foot}'`} value={foot} />
+                    ))}
+                  </Picker>
+                </View>
+                
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Inches</Text>
+                  <Picker
+                    selectedValue={selectedInches}
+                    onValueChange={(itemValue: number) => setSelectedInches(itemValue)}
+                    style={styles.picker}
+                  >
+                    {inches.map((inch) => (
+                      <Picker.Item key={inch} label={`${inch}"`} value={inch} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              
+              <View style={styles.pickerActions}>
+                <Button
+                  variant="outline"
+                  onPress={() => setShowHeightPicker(false)}
+                  style={styles.pickerButton}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onPress={handleHeightConfirm}
+                  style={styles.pickerButton}
+                >
+                  Confirm
+                </Button>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   const renderWeightStep = () => {
     const weightInLbs = surveyData.weight?.value || 150;
@@ -227,24 +364,28 @@ export default function SurveyScreen() {
             </Text>
           </View>
           <View style={styles.weightAdjustment}>
-            <TouchableOpacity
-              style={styles.weightAdjustButton}
+            <Button
+              variant="outline"
+              size="sm"
               onPress={() => {
                 const newWeight = weightInLbs + 5;
-                setSurveyData({ weight: { value: newWeight, unit: 'lbs' } });
+                setSurveyData({ weight: { value: newWeight } });
               }}
-            >
-              <Text style={styles.weightAdjustButtonText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={styles.weightAdjustButton}
+            >
+              +
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onPress={() => {
                 const newWeight = Math.max(0, weightInLbs - 5);
-                setSurveyData({ weight: { value: newWeight, unit: 'lbs' } });
+                setSurveyData({ weight: { value: newWeight } });
               }}
+              style={styles.weightAdjustButton}
             >
-              <Text style={styles.weightAdjustButtonText}>-</Text>
-            </TouchableOpacity>
+              -
+            </Button>
           </View>
         </View>
       </View>
@@ -254,47 +395,29 @@ export default function SurveyScreen() {
   const renderExerciseFrequencyStep = () => (
     <View style={styles.stepContainer}>
       {['2-3 days', '3-4 days', '5-6 days', '7 days'].map((frequency) => (
-        <TouchableOpacity
+        <Button
           key={frequency}
-          style={[
-            styles.optionButton,
-            surveyData.exerciseFrequency === frequency && styles.optionButtonSelected,
-          ]}
+          variant={surveyData.exerciseFrequency === frequency ? 'selected' : 'outline'}
           onPress={() => setSurveyData({ exerciseFrequency: frequency as any })}
+          style={styles.optionButton}
         >
-          <Text
-            style={[
-              styles.optionButtonText,
-              surveyData.exerciseFrequency === frequency && styles.optionButtonTextSelected,
-            ]}
-          >
-            {frequency}
-          </Text>
-        </TouchableOpacity>
+          {frequency}
+        </Button>
       ))}
     </View>
   );
 
-  const renderWorkoutGoalStep = () => (
+    const renderWorkoutGoalStep = () => (
     <View style={styles.stepContainer}>
       {['gain muscle', 'lose fat', 'improve endurance'].map((goal) => (
-        <TouchableOpacity
+        <Button
           key={goal}
-          style={[
-            styles.optionButton,
-            surveyData.workoutGoal === goal && styles.optionButtonSelected,
-          ]}
+          variant={surveyData.workoutGoal === goal ? 'selected' : 'outline'}
           onPress={() => setSurveyData({ workoutGoal: goal as any })}
+          style={styles.optionButton}
         >
-          <Text
-            style={[
-              styles.optionButtonText,
-              surveyData.workoutGoal === goal && styles.optionButtonTextSelected,
-            ]}
-          >
-            {goal.charAt(0).toUpperCase() + goal.slice(1)}
-          </Text>
-        </TouchableOpacity>
+          {goal.charAt(0).toUpperCase() + goal.slice(1)}
+        </Button>
       ))}
     </View>
   );
@@ -363,18 +486,14 @@ export default function SurveyScreen() {
         {renderCurrentStep()}
 
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[
-              styles.nextButton,
-              !canProceed() && styles.nextButtonDisabled,
-            ]}
+          <Button
             onPress={nextStep}
             disabled={!canProceed()}
+            style={styles.nextButton}
+            size="lg"
           >
-            <Text style={styles.nextButtonText}>
-              {currentStep < SURVEY_STEPS.length - 1 ? 'Next' : 'Complete Survey'}
-            </Text>
-          </TouchableOpacity>
+            {currentStep < SURVEY_STEPS.length - 1 ? 'Next' : 'Complete Survey'}
+          </Button>
         </View>
       </Animated.View>
     </KeyboardAvoidingView>
@@ -385,6 +504,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E3DAC9',
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   content: {
     flex: 1,
@@ -419,12 +539,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 16,
     marginBottom: 16,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: 'transparent',
+    minHeight: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   optionButtonSelected: {
-    backgroundColor: '#000000',
+    backgroundColor: '#ffffff',
     borderColor: '#000000',
+    borderWidth: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   optionButtonText: {
     fontSize: 18,
@@ -433,7 +567,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionButtonTextSelected: {
-    color: '#E3DAC9',
+    color: '#000000',
   },
   datePickerLabel: {
     fontSize: 18,
@@ -462,6 +596,111 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#E3DAC9',
   },
+  dateScrollerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  dateScrollerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  dateScrollerColumn: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  dateScrollerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 10,
+  },
+  dateScroller: {
+    height: 120,
+    width: '100%',
+  },
+  dateScrollerOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
+  },
+  dateScrollerOptionSelected: {
+    backgroundColor: '#000000',
+  },
+  dateScrollerOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  dateScrollerOptionTextSelected: {
+    color: '#ffffff',
+  },
+  dateScrollerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  dateScrollerButton: {
+    flex: 1,
+  },
+  heightDisplay: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  pickerColumn: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  pickerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 10,
+  },
+  picker: {
+    width: '100%',
+    height: 120,
+  },
+  pickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  pickerButton: {
+    flex: 1,
+  },
   heightContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -476,25 +715,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   heightWheel: {
-    height: 200,
+    height: 120,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   heightOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginVertical: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginVertical: 2,
     borderRadius: 8,
+    minWidth: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heightOptionSelected: {
     backgroundColor: '#000000',
   },
   heightOptionText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000000',
   },
   heightOptionTextSelected: {
-    color: '#E3DAC9',
+    color: '#ffffff',
   },
   weightContainer: {
     alignItems: 'center',

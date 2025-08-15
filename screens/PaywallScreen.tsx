@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Dimensions,
   Alert,
@@ -12,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
+import { Button } from '../components/ui';
 
 type PaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 
@@ -149,12 +149,10 @@ export default function PaywallScreen() {
         <Text style={styles.plansTitle}>Choose Your Plan</Text>
         
         <View style={styles.planOptions}>
-          <TouchableOpacity
-            style={[
-              styles.planOption,
-              selectedPlan === 'monthly' && styles.planOptionSelected,
-            ]}
+          <Button
+            variant={selectedPlan === 'monthly' ? 'default' : 'outline'}
             onPress={() => setSelectedPlan('monthly')}
+            style={styles.planOption}
           >
             <View style={styles.planHeader}>
               <Text style={styles.planName}>Monthly</Text>
@@ -166,14 +164,12 @@ export default function PaywallScreen() {
             </View>
             <Text style={styles.planPrice}>{plans.monthly.price}</Text>
             <Text style={styles.planPeriod}>per {plans.monthly.period}</Text>
-          </TouchableOpacity>
+          </Button>
 
-          <TouchableOpacity
-            style={[
-              styles.planOption,
-              selectedPlan === 'yearly' && styles.planOptionSelected,
-            ]}
+          <Button
+            variant={selectedPlan === 'yearly' ? 'default' : 'outline'}
             onPress={() => setSelectedPlan('yearly')}
+            style={styles.planOption}
           >
             <View style={styles.planHeader}>
               <Text style={styles.planName}>Yearly</Text>
@@ -188,31 +184,28 @@ export default function PaywallScreen() {
             {plans.yearly.savings && (
               <Text style={styles.savingsText}>{plans.yearly.savings}</Text>
             )}
-          </TouchableOpacity>
+          </Button>
         </View>
       </View>
 
       {/* Subscribe Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.subscribeButton,
-            isProcessing && styles.subscribeButtonDisabled,
-          ]}
+        <Button
           onPress={handleSubscribe}
           disabled={isProcessing}
+          style={styles.subscribeButton}
+          size="lg"
         >
-          <Text style={styles.subscribeButtonText}>
-            {isProcessing ? 'Processing...' : `Subscribe for ${plans[selectedPlan].price}/${plans[selectedPlan].period}`}
-          </Text>
-        </TouchableOpacity>
+          {isProcessing ? 'Processing...' : `Subscribe for ${plans[selectedPlan].price}/${plans[selectedPlan].period}`}
+        </Button>
 
-        <TouchableOpacity
-          style={styles.skipButton}
+        <Button
+          variant="ghost"
           onPress={handleSkip}
+          style={styles.skipButton}
         >
-          <Text style={styles.skipButtonText}>Skip for now</Text>
-        </TouchableOpacity>
+          Skip for now
+        </Button>
       </View>
 
       {/* Terms */}

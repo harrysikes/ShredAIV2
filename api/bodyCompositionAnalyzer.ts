@@ -4,7 +4,7 @@ export interface BodyCompositionRequest {
     sex: 'male' | 'female';
     age: number;
     height: { feet: number; inches: number };
-    weight: { value: number; // Always in pounds
+    weight: { value: number; unit: string }; // Always in pounds
     exerciseFrequency: string;
     workoutGoal: string;
   };

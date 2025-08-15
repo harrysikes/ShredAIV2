@@ -1,84 +1,112 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Text } from 'react-native';
 
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
 }
 
-export default function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  
+const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps }) => {
+  const fillAnimation = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const progress = (currentStep + 1) / totalSteps;
-    Animated.timing(progressAnim, {
-      toValue: progress,
+    Animated.timing(fillAnimation, {
+      toValue: progressValue,
       duration: 500,
       useNativeDriver: false,
     }).start();
-  }, [currentStep, totalSteps, progressAnim]);
+  }, [progressValue, fillAnimation]);
+
+  const renderSegments = () => {
+    const segments = [];
+    for (let i = 0; i < totalSteps; i++) {
+      const isCompleted = i < currentStep;
+      
+      segments.push(
+        <View key={i} style={styles.segmentContainer}>
+          <View style={[styles.segment, isCompleted && styles.segmentCompleted]}>
+            {isCompleted && (
+              <Animated.View 
+                style={[
+                  styles.segmentFill,
+                  {
+                    width: fillAnimation.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]} 
+              />
+            )}
+          </View>
+        </View>
+      );
+    }
+    return segments;
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.background}>
-        <Animated.View
-          style={[
-            styles.progress,
-            {
-              width: progressAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
-        />
+      {/* Segmented Progress */}
+      <View style={styles.segmentsContainer}>
+        {renderSegments()}
       </View>
-      <View style={styles.stepsContainer}>
-        {Array.from({ length: totalSteps }, (_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.step,
-              index <= currentStep ? styles.stepCompleted : styles.stepPending,
-            ]}
-          />
-        ))}
+      
+      {/* Step Counter */}
+      <View style={styles.stepCounter}>
+        <Text style={styles.stepText}>
+          Step {currentStep} of {totalSteps}
+        </Text>
       </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
   },
-  background: {
-    height: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progress: {
-    height: '100%',
-    backgroundColor: '#000000',
-    borderRadius: 2,
-  },
-  stepsContainer: {
+  segmentsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 15,
+    alignItems: 'center',
+    marginBottom: 15,
   },
-  step: {
-    width: 8,
+  segmentContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  segment: {
+    width: '80%',
     height: 8,
+    backgroundColor: '#E5E7EB',
     borderRadius: 4,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  stepCompleted: {
+  segmentCompleted: {
     backgroundColor: '#000000',
   },
-  stepPending: {
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  segmentFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    backgroundColor: '#000000',
+    borderRadius: 4,
+  },
+
+  stepCounter: {
+    alignItems: 'center',
+  },
+  stepText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });
+
+export default ProgressBar;
+
