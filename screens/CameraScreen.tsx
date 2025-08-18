@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +17,16 @@ import { Button } from '../components/ui';
 
 type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Camera'>;
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+interface SetupQuality {
+  lighting: 'optimal' | 'good' | 'poor';
+  angle: 'optimal' | 'good' | 'poor';
+  distance: 'optimal' | 'good' | 'poor';
+  pose: 'optimal' | 'good' | 'poor';
+  overall: number; // 0-100
+}
+
 export default function CameraScreen() {
   const navigation = useNavigation<CameraScreenNavigationProp>();
   const { setCapturedImage } = useSurveyStore();
@@ -26,8 +37,17 @@ export default function CameraScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [humanDetected, setHumanDetected] = useState<boolean | null>(null);
   const [detectionMessage, setDetectionMessage] = useState<string>('');
+  const [setupQuality, setSetupQuality] = useState<SetupQuality>({
+    lighting: 'poor',
+    angle: 'poor',
+    distance: 'poor',
+    pose: 'poor',
+    overall: 0
+  });
+  const [showSetupGuide, setShowSetupGuide] = useState(true);
   const cameraRef = useRef<any>(null);
   const countdownAnim = useRef(new Animated.Value(1)).current;
+  const qualityCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -67,7 +87,102 @@ export default function CameraScreen() {
     }
   }, [countdown, isCountingDown]);
 
+  // Start quality monitoring when camera is ready
+  useEffect(() => {
+    if (hasPermission) {
+      startQualityMonitoring();
+    }
+    return () => {
+      if (qualityCheckInterval.current) {
+        clearInterval(qualityCheckInterval.current);
+      }
+    };
+  }, [hasPermission]);
+
+  const startQualityMonitoring = () => {
+    // Simulate real-time quality analysis
+    qualityCheckInterval.current = setInterval(() => {
+      analyzeSetupQuality();
+    }, 2000); // Check every 2 seconds
+  };
+
+  const analyzeSetupQuality = () => {
+    // Simulate analysis of camera feed
+    // In production, this would analyze actual camera frames
+    const lighting: 'optimal' | 'good' | 'poor' = Math.random() > 0.3 ? 'optimal' : Math.random() > 0.5 ? 'good' : 'poor';
+    const angle: 'optimal' | 'good' | 'poor' = Math.random() > 0.4 ? 'optimal' : Math.random() > 0.6 ? 'good' : 'poor';
+    const distance: 'optimal' | 'good' | 'poor' = Math.random() > 0.35 ? 'optimal' : Math.random() > 0.55 ? 'good' : 'poor';
+    const pose: 'optimal' | 'good' | 'poor' = Math.random() > 0.45 ? 'optimal' : Math.random() > 0.65 ? 'good' : 'poor';
+    
+    const scores = { lighting, angle, distance, pose };
+    const overall = calculateOverallScore(scores);
+    
+    setSetupQuality({ ...scores, overall });
+  };
+
+  const calculateOverallScore = (scores: Omit<SetupQuality, 'overall'>): number => {
+    let total = 0;
+    Object.values(scores).forEach(score => {
+      if (score === 'optimal') total += 25;
+      else if (score === 'good') total += 15;
+      else total += 5;
+    });
+    return Math.min(100, total);
+  };
+
+  const getQualityColor = (quality: 'optimal' | 'good' | 'poor') => {
+    switch (quality) {
+      case 'optimal': return '#00FF00';
+      case 'good': return '#FFFF00';
+      case 'poor': return '#FF0000';
+    }
+  };
+
+  const getQualityIcon = (quality: 'optimal' | 'good' | 'poor') => {
+    switch (quality) {
+      case 'optimal': return '✅';
+      case 'good': return '⚠️';
+      case 'poor': return '❌';
+    }
+  };
+
+  const getSetupFeedback = (): string[] => {
+    const feedback: string[] = [];
+    
+    if (setupQuality.lighting === 'poor') {
+      feedback.push('Move to better lighting or turn on more lights');
+    }
+    if (setupQuality.angle === 'poor') {
+      feedback.push('Face camera directly, avoid side angles');
+    }
+    if (setupQuality.distance === 'poor') {
+      feedback.push('Stand 3-6 feet from camera');
+    }
+    if (setupQuality.pose === 'poor') {
+      feedback.push('Show upper body clearly, arms slightly away from sides');
+    }
+    
+    if (feedback.length === 0) {
+      feedback.push('Perfect setup! Ready for analysis');
+    }
+    
+    return feedback;
+  };
+
   const startCountdown = () => {
+    if (setupQuality.overall < 70) {
+      Alert.alert(
+        'Setup Needs Improvement',
+        'Your camera setup quality is below 70%. For best results, please improve:\n\n' + 
+        getSetupFeedback().join('\n'),
+        [{ text: 'Continue Anyway', onPress: () => proceedWithCountdown() }]
+      );
+      return;
+    }
+    proceedWithCountdown();
+  };
+
+  const proceedWithCountdown = () => {
     setCountdown(5);
     setIsCountingDown(true);
     setHumanDetected(null);
@@ -81,7 +196,7 @@ export default function CameraScreen() {
         setIsAnalyzing(true);
         
         const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
+          quality: 0.9, // Higher quality for better analysis
           base64: true,
         });
         
@@ -150,6 +265,13 @@ export default function CameraScreen() {
     );
   };
 
+  const getShutterButtonStyle = () => {
+    if (isCountingDown || isAnalyzing) {
+      return [styles.shutterButton, styles.shutterButtonDisabled];
+    }
+    return styles.shutterButton;
+  };
+
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -210,6 +332,46 @@ export default function CameraScreen() {
           </Button>
         </View>
 
+        {/* Setup Quality Display */}
+        <View style={styles.qualityContainer}>
+          <Text style={styles.qualityTitle}>Setup Quality: {setupQuality.overall}%</Text>
+          <View style={styles.qualityGrid}>
+            <View style={styles.qualityItem}>
+              <Text style={styles.qualityLabel}>Lighting</Text>
+              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.lighting) }]}>
+                {getQualityIcon(setupQuality.lighting)}
+              </Text>
+            </View>
+            <View style={styles.qualityItem}>
+              <Text style={styles.qualityLabel}>Angle</Text>
+              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.angle) }]}>
+                {getQualityIcon(setupQuality.angle)}
+              </Text>
+            </View>
+            <View style={styles.qualityItem}>
+              <Text style={styles.qualityLabel}>Distance</Text>
+              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.distance) }]}>
+                {getQualityIcon(setupQuality.distance)}
+              </Text>
+            </View>
+            <View style={styles.qualityItem}>
+              <Text style={styles.qualityLabel}>Pose</Text>
+              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.pose) }]}>
+                {getQualityIcon(setupQuality.pose)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Real-time Setup Feedback */}
+        <View style={styles.feedbackContainer}>
+          {getSetupFeedback().map((feedback, index) => (
+            <Text key={index} style={styles.feedbackText}>
+              {feedback}
+            </Text>
+          ))}
+        </View>
+
         {/* Center countdown */}
         {isCountingDown && (
           <View style={styles.countdownContainer}>
@@ -263,10 +425,13 @@ export default function CameraScreen() {
           {/* Positioning tips */}
           {!isCountingDown && humanDetected === null && (
             <View style={styles.tipsContainer}>
-              <Text style={styles.tipsTitle}>📸 Positioning Tips:</Text>
+              <Text style={styles.tipsTitle}>📸 Optimal Setup Guide:</Text>
               <Text style={styles.tipText}>• Stand 3-6 feet from camera</Text>
-              <Text style={styles.tipText}>• Ensure good lighting</Text>
-              <Text style={styles.tipText}>• Show your upper body clearly</Text>
+              <Text style={styles.tipText}>• Face camera directly, avoid side angles</Text>
+              <Text style={styles.tipText}>• Ensure even, bright lighting from front</Text>
+              <Text style={styles.tipText}>• Show upper body clearly, arms slightly away</Text>
+              <Text style={styles.tipText}>• Remove loose clothing for accurate analysis</Text>
+              <Text style={styles.tipText}>• Avoid shadows and harsh backlighting</Text>
             </View>
           )}
         </View>
@@ -276,10 +441,7 @@ export default function CameraScreen() {
           <Button
             onPress={startCountdown}
             disabled={isCountingDown || isAnalyzing}
-            style={[
-              styles.shutterButton,
-              (isCountingDown || isAnalyzing) && styles.shutterButtonDisabled,
-            ]}
+            style={isCountingDown || isAnalyzing ? [styles.shutterButton, styles.shutterButtonDisabled] : styles.shutterButton}
           >
             <View style={styles.shutterButtonInner} />
           </Button>
@@ -303,7 +465,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'transparent',
   },
   guideOverlay: {
     position: 'absolute',
@@ -314,6 +476,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+    pointerEvents: 'none',
   },
   guideFrame: {
     width: '80%',
@@ -322,6 +485,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 10,
     position: 'relative',
+    pointerEvents: 'none',
   },
   guideCorner: {
     position: 'absolute',
@@ -529,6 +693,53 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     textAlign: 'left',
+    marginBottom: 5,
+  },
+  qualityContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 2,
+  },
+  qualityTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  qualityGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  qualityItem: {
+    alignItems: 'center',
+  },
+  qualityLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  qualityScore: {
+    fontSize: 40,
+  },
+  feedbackContainer: {
+    position: 'absolute',
+    top: 200,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 2,
+  },
+  feedbackText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    textAlign: 'center',
     marginBottom: 5,
   },
 });

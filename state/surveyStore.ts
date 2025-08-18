@@ -3,15 +3,17 @@ import { create } from 'zustand';
 export interface SurveyData {
   sex: 'male' | 'female' | null;
   dateOfBirth: Date | null;
+  age?: number;
   height: {
     feet: number;
     inches: number;
   } | null;
   weight: {
-    value: number; // Always in pounds
+    value: number;
+    unit: 'lbs' | 'kg';
   } | null;
-  exerciseFrequency: '2-3 days' | '3-4 days' | '5-6 days' | '7 days' | null;
-  workoutGoal: 'gain muscle' | 'lose fat' | 'improve endurance' | null;
+  exerciseFrequency: 'never' | 'rarely' | 'sometimes' | 'often' | 'very-often' | null;
+  workoutGoal: 'lose-weight' | 'build-muscle' | 'maintain' | 'improve-fitness' | 'sports-performance' | null;
 }
 
 export interface AppState {
@@ -34,14 +36,14 @@ const initialSurveyData: SurveyData = {
   sex: null,
   dateOfBirth: null,
   height: null,
-  weight: null,
+  weight: { value: 150, unit: 'lbs' },
   exerciseFrequency: null,
   workoutGoal: null,
 };
 
 export const useSurveyStore = create<AppState>((set) => ({
   surveyData: initialSurveyData,
-  currentStep: 0,
+  currentStep: 1,
   capturedImage: null,
   bodyFatPercentage: null,
   isLoading: false,
@@ -70,7 +72,7 @@ export const useSurveyStore = create<AppState>((set) => ({
   resetSurvey: () =>
     set({
       surveyData: initialSurveyData,
-      currentStep: 0,
+      currentStep: 1,
       capturedImage: null,
       bodyFatPercentage: null,
       isLoading: false,

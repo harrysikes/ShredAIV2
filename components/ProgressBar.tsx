@@ -8,6 +8,9 @@ interface ProgressBarProps {
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps }) => {
   const fillAnimation = useRef(new Animated.Value(0)).current;
+  
+  // Calculate progress value as percentage
+  const progressValue = (currentStep / totalSteps) * 100;
 
   useEffect(() => {
     Animated.timing(fillAnimation, {

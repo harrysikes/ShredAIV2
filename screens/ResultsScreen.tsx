@@ -155,7 +155,7 @@ export default function ResultsScreen() {
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Sex:</Text>
           <Text style={styles.summaryValue}>
-            {surveyData.sex?.charAt(0).toUpperCase() + surveyData.sex?.slice(1)}
+            {surveyData.sex ? surveyData.sex.charAt(0).toUpperCase() + surveyData.sex.slice(1) : 'Not specified'}
           </Text>
         </View>
         <View style={styles.summaryRow}>

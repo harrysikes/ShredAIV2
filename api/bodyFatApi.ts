@@ -75,9 +75,9 @@ export const calculateBodyFat = async (
         sex: surveyData.sex,
         age,
         height: surveyData.height,
-        weight: { value: surveyData.weight?.value || 150 }, // Always in pounds
-        exerciseFrequency: surveyData.exerciseFrequency || '2-3 days',
-        workoutGoal: surveyData.workoutGoal || 'improve endurance',
+        weight: { value: surveyData.weight?.value || 150, unit: surveyData.weight?.unit || 'lbs' },
+        exerciseFrequency: surveyData.exerciseFrequency || 'sometimes',
+        workoutGoal: surveyData.workoutGoal || 'improve-fitness',
       },
     };
     
@@ -187,13 +187,13 @@ const calculateSurveyEstimate = (surveyData: SurveyData, age: number): number =>
   if (age > 60) baseEstimate += 3;
   
   // Exercise frequency adjustments
-  if (surveyData.exerciseFrequency === '7 days') baseEstimate -= 3;
-  else if (surveyData.exerciseFrequency === '5-6 days') baseEstimate -= 2;
-  else if (surveyData.exerciseFrequency === '3-4 days') baseEstimate -= 1;
+  if (surveyData.exerciseFrequency === 'very-often') baseEstimate -= 3;
+  else if (surveyData.exerciseFrequency === 'often') baseEstimate -= 2;
+  else if (surveyData.exerciseFrequency === 'sometimes') baseEstimate -= 1;
   
   // Goal adjustments
-  if (surveyData.workoutGoal === 'lose fat') baseEstimate -= 2;
-  else if (surveyData.workoutGoal === 'gain muscle') baseEstimate += 1;
+  if (surveyData.workoutGoal === 'lose-weight') baseEstimate -= 2;
+  else if (surveyData.workoutGoal === 'build-muscle') baseEstimate += 1;
   
   // Add realistic variation
   const variation = (Math.random() - 0.5) * 4;
