@@ -441,7 +441,7 @@ export default function CameraScreen() {
           <Button
             onPress={startCountdown}
             disabled={isCountingDown || isAnalyzing}
-            style={isCountingDown || isAnalyzing ? [styles.shutterButton, styles.shutterButtonDisabled] : styles.shutterButton}
+            style={isCountingDown || isAnalyzing ? StyleSheet.flatten([styles.shutterButton, styles.shutterButtonDisabled]) : styles.shutterButton}
           >
             <View style={styles.shutterButtonInner} />
           </Button>

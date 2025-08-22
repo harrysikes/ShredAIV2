@@ -45,7 +45,7 @@ export function Alert({
                   key={index}
                   variant={action.variant || 'outline'}
                   onPress={action.onPress}
-                  style={action.style === 'destructive' ? [styles.actionButton, styles.destructiveButton] : styles.actionButton}
+                  style={action.style === 'destructive' ? StyleSheet.flatten([styles.actionButton, styles.destructiveButton]) : styles.actionButton}
                 >
                   {action.text}
                 </Button>

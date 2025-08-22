@@ -858,7 +858,7 @@ export default function SurveyScreen() {
           <Button
             onPress={handleNext}
             disabled={!canProceed()}
-            style={!canProceed() ? [styles.nextButton, styles.nextButtonDisabled] : styles.nextButton}
+            style={!canProceed() ? StyleSheet.flatten([styles.nextButton, styles.nextButtonDisabled]) : styles.nextButton}
           >
             {currentStep === SURVEY_STEPS.length ? 'Complete Survey' : 'Next'}
           </Button>
