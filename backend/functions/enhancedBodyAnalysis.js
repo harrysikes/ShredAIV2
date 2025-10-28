@@ -5,7 +5,6 @@ const { v4: uuidv4 } = require('uuid');
 const { ImageAnnotatorClient } = require('@google-cloud/vision');
 const OpenAI = require('openai');
 const AWS = require('aws-sdk');
-const tf = require('@tensorflow/tfjs-node');
 
 const router = express.Router();
 

@@ -11,7 +11,6 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^4.10.0",
     "aws-sdk": "^2.1450.0",
     "axios": "^1.5.0",
     "bcryptjs": "^2.4.3",

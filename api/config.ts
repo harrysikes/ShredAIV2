@@ -7,7 +7,7 @@ export const API_CONFIG = {
   },
   // Production (Vercel)
   production: {
-    baseURL: 'https://your-backend-domain.vercel.app',
+    baseURL: 'https://backend-q8gcefib5-harry-sikes-projects.vercel.app',
     timeout: 30000,
   }
 };
