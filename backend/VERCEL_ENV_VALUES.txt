@@ -1,0 +1,40 @@
+Environment Variables to Add in Vercel Dashboard
+=================================================
+
+Open https://vercel.com/dashboard → Your Project → Settings → Environment Variables
+
+ADD THESE VARIABLES:
+
+┌─────────────────────────────────┬────────────────────────────────────────┐
+│ Variable Name                    │ Value                                  │
+├─────────────────────────────────┼────────────────────────────────────────┤
+│ OPENAI_API_KEY                   │ [Your OpenAI API key starting with sk-]│
+│ JWT_SECRET                       │ OM7T73VW3jfGBKZjCJSURzXzIDUwUza7XA96ZnZ│
+│                                  │ jCJSURzXzIDUwUza7XA96ZnZjCh8=          │
+│ RATE_LIMIT_WINDOW_MS             │ 900000                                 │
+│ RATE_LIMIT_MAX_REQUESTS          │ 100                                   │
+│ ALLOWED_ORIGINS                  │ *                                      │
+│ MAX_IMAGE_SIZE_MB                │ 10                                     │
+│ SUPPORTED_IMAGE_FORMATS          │ jpg,jpeg,png,webp                      │
+│ GOOGLE_CLOUD_VISION_API_KEY      │ [Leave empty for now or add later]    │
+│ GOOGLE_CLOUD_PROJECT_ID          │ [Leave empty for now or add later]    │
+└─────────────────────────────────┴────────────────────────────────────────┘
+
+INSTRUCTIONS:
+1. Copy each variable name
+2. Paste it in "Name" field
+3. Copy the value
+4. Paste it in "Value" field  
+5. Select "Production" environment
+6. Click "Save"
+7. Repeat for each variable
+
+Or use vercel CLI by typing each command in terminal (without quotes):
+vercel env add OPENAI_API_KEY production
+vercel env add JWT_SECRET production  
+vercel env add RATE_LIMIT_WINDOW_MS production
+vercel env add RATE_LIMIT_MAX_REQUESTS production
+vercel env add ALLOWED_ORIGINS production
+vercel env add MAX_IMAGE_SIZE_MB production
+vercel env add SUPPORTED_IMAGE_FORMATS production
+

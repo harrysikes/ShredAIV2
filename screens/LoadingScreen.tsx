@@ -10,7 +10,6 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
-import { calculateBodyFat } from '../api/bodyFatApi';
 
 type LoadingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Loading'>;
 
@@ -46,34 +45,30 @@ export default function LoadingScreen() {
       useNativeDriver: true,
     }).start();
 
-    // Simulate AI analysis steps
-    const performAnalysis = async () => {
+    // Simulate AI analysis steps WITHOUT actually calling the API
+    const performFalseAnalysis = async () => {
       try {
         setIsLoading(true);
         
-        // Step 1: Human detection
+        // Step 1: Human detection (1.5 seconds)
         setAnalysisStep(1);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Step 2: Muscle visibility analysis
+        // Step 2: Muscle visibility analysis (2 seconds)
         setAnalysisStep(2);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Step 3: Body proportion calculations
+        // Step 3: Body proportion calculations (2 seconds)
         setAnalysisStep(3);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Step 4: Final body fat calculation (1.5 seconds)
+        setAnalysisStep(4);
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Step 4: Final body fat calculation
-        setAnalysisStep(4);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Call the enhanced body fat calculation API
-        const result = await calculateBodyFat({
-          surveyData,
-          imageData: capturedImage || '',
-        });
-        
-        setBodyFatPercentage(result.bodyFatPercentage);
+        // Set a mock body fat percentage (this will be replaced with real analysis after subscription)
+        const mockBodyFatPercentage = Math.floor(Math.random() * 15) + 8; // Random between 8-22%
+        setBodyFatPercentage(mockBodyFatPercentage);
         setIsLoading(false);
         
         // Navigate to paywall after a short delay
@@ -82,13 +77,17 @@ export default function LoadingScreen() {
         }, 500);
         
       } catch (error) {
-        console.error('Error during analysis:', error);
+        console.error('Error during false analysis:', error);
         setIsLoading(false);
+        // Still navigate to paywall even if there's an error
+        setTimeout(() => {
+          navigation.navigate('Paywall');
+        }, 500);
       }
     };
 
-    // Start analysis after a short delay
-    const timer = setTimeout(performAnalysis, 1000);
+    // Start false analysis after a short delay
+    const timer = setTimeout(performFalseAnalysis, 1000);
 
     return () => {
       pulseAnimation.stop();
