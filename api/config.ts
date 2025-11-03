@@ -13,9 +13,13 @@ export const API_CONFIG = {
 };
 
 // Get current environment
+// In React Native, use __DEV__ instead of NODE_ENV
 export const getApiConfig = () => {
-  const env = process.env.NODE_ENV || 'development';
-  return API_CONFIG[env as keyof typeof API_CONFIG] || API_CONFIG.development;
+  // __DEV__ is true in development, false in production builds
+  if (__DEV__) {
+    return API_CONFIG.development;
+  }
+  return API_CONFIG.production;
 };
 
 // API Endpoints

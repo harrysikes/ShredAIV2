@@ -839,6 +839,17 @@ export default function SurveyScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {/* Privacy Policy Link */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PrivacyPolicy')}
+          style={styles.privacyLinkContainer}
+        >
+          <Text style={styles.privacyLinkText}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.privacyLink}>Privacy Policy</Text>
+          </Text>
+        </TouchableOpacity>
+
         <View style={[
           styles.navigationButtons,
           currentStep === 1 && styles.navigationButtonsFirstStep
@@ -1246,9 +1257,24 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: 40,
     paddingHorizontal: 20,
+    paddingTop: 15,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  privacyLinkContainer: {
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  privacyLinkText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  privacyLink: {
+    color: '#007AFF',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   navigationButtons: {
     flexDirection: 'row',
