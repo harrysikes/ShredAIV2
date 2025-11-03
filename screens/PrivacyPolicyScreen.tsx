@@ -119,9 +119,8 @@ export default function PrivacyPolicyScreen() {
   const navigation = useNavigation<PrivacyPolicyScreenNavigationProp>();
 
   const handleOpenFullPolicy = () => {
-    // You can host the HTML version and link to it
-    // For now, we'll just show the content in-app
-    Linking.openURL('https://shredai.app/privacy-policy.html').catch(err =>
+    // Open the hosted privacy policy on GitHub Pages
+    Linking.openURL('https://harrysikes.github.io/ShredAIV2/').catch(err =>
       console.error('Failed to open privacy policy URL:', err)
     );
   };
