@@ -12,6 +12,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import { generateWorkoutPlan } from '../api/workoutPlanGenerator';
 import { Button } from '../components/ui';
+import colors from '../constants/colors';
 
 type ResultsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Results'>;
 
@@ -65,13 +66,13 @@ export default function ResultsScreen() {
 
   const getBodyFatColor = (percentage: number) => {
     if (surveyData.sex === 'male') {
-      if (percentage < 18) return '#4CAF50'; // Green
-      if (percentage < 25) return '#FF9800'; // Orange
-      return '#F44336'; // Red
+      if (percentage < 18) return colors.success; // Clinical green
+      if (percentage < 25) return colors.warning; // Clinical amber
+      return colors.error; // Clinical red
     } else {
-      if (percentage < 25) return '#4CAF50'; // Green
-      if (percentage < 32) return '#FF9800'; // Orange
-      return '#F44336'; // Red
+      if (percentage < 25) return colors.success; // Clinical green
+      if (percentage < 32) return colors.warning; // Clinical amber
+      return colors.error; // Clinical red
     }
   };
 
@@ -98,9 +99,8 @@ export default function ResultsScreen() {
 
       {/* Body Fat Result */}
       <View style={styles.resultCard}>
-        <Text style={styles.resultLabel}>Body Fat Percentage</Text>
-        <View style={styles.resultValueContainer}>
-          <Text style={styles.resultValue}>{bodyFatPercentage}%</Text>
+        <View style={styles.resultHeader}>
+          <Text style={styles.resultLabel}>Body Fat Percentage</Text>
           <View style={[
             styles.categoryBadge,
             { backgroundColor: getBodyFatColor(bodyFatPercentage) }
@@ -109,6 +109,21 @@ export default function ResultsScreen() {
               {getBodyFatCategory(bodyFatPercentage)}
             </Text>
           </View>
+        </View>
+        <View style={styles.resultValueContainer}>
+          <Text style={styles.resultValue}>{bodyFatPercentage?.toFixed(1)}</Text>
+          <Text style={styles.resultPercent}>%</Text>
+        </View>
+        <View style={styles.resultBar}>
+          <View
+            style={[
+              styles.resultBarFill,
+              {
+                width: `${Math.min(100, (bodyFatPercentage / 35) * 100)}%`,
+                backgroundColor: getBodyFatColor(bodyFatPercentage),
+              }
+            ]}
+          />
         </View>
         <Text style={styles.resultDescription}>
           This AI-powered calculation analyzes muscle visibility, body proportions, and anatomical features for maximum accuracy.
@@ -162,7 +177,16 @@ export default function ResultsScreen() {
           <Text style={styles.summaryLabel}>Age:</Text>
           <Text style={styles.summaryValue}>
             {surveyData.dateOfBirth 
-              ? `${new Date().getFullYear() - surveyData.dateOfBirth.getFullYear()} years`
+              ? (() => {
+                  const today = new Date();
+                  const birthDate = new Date(surveyData.dateOfBirth);
+                  let age = today.getFullYear() - birthDate.getFullYear();
+                  const monthDiff = today.getMonth() - birthDate.getMonth();
+                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                  }
+                  return `${age} years`;
+                })()
               : 'Not specified'
             }
           </Text>
@@ -277,7 +301,7 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E3DAC9',
+    backgroundColor: colors.background,
   },
   header: {
     alignItems: 'center',
@@ -287,80 +311,99 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#000000',
+    fontWeight: '600',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#000000',
+    color: colors.textSecondary,
     textAlign: 'center',
-    opacity: 0.7,
     lineHeight: 22,
   },
   resultCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     marginHorizontal: 20,
     marginBottom: 20,
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 28,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   resultLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 16,
-    textAlign: 'center',
+    color: colors.textSecondary,
+    flex: 1,
   },
   resultValueContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   resultValue: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#000000',
-    marginBottom: 12,
+    fontSize: 64,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 64,
+    letterSpacing: -1,
+  },
+  resultPercent: {
+    fontSize: 32,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  resultBar: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  resultBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    transition: 'width 0.5s ease',
   },
   categoryBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   categoryText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '500',
   },
   resultDescription: {
     fontSize: 14,
-    color: '#000000',
-    opacity: 0.7,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   aiAnalysisCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   aiAnalysisTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
+    fontSize: 19,
+    fontWeight: '600',
+    color: colors.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -371,69 +414,63 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   insightLabel: {
-    fontSize: 16,
-    color: '#000000',
-    opacity: 0.7,
+    fontSize: 15,
+    color: colors.textSecondary,
   },
   insightValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textPrimary,
   },
   analysisFactors: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopColor: colors.border,
   },
   factorsTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#000000',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   factorText: {
     fontSize: 14,
-    color: '#000000',
-    opacity: 0.7,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 8,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   summaryTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
+    fontSize: 19,
+    fontWeight: '600',
+    color: colors.textPrimary,
     marginBottom: 20,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: colors.border,
   },
   summaryLabel: {
-    fontSize: 16,
-    color: '#000000',
-    opacity: 0.7,
+    fontSize: 15,
+    color: colors.textSecondary,
   },
   summaryValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textPrimary,
   },
   workoutCard: {
     backgroundColor: '#FFFFFF',

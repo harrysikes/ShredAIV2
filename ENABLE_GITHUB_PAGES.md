@@ -25,3 +25,4 @@
 
 That's it! Your privacy policy is now live and ready for App Store submission! 🎉
 
+

@@ -14,105 +14,161 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 type PrivacyPolicyScreenNavigationProp = StackNavigationProp<RootStackParamList, 'PrivacyPolicy'>;
 
 const PRIVACY_POLICY_CONTENT = `
-Last Updated: November 1, 2024
+Version 1.0
+Last Updated: February 16, 2025
+Effective Date: February 16, 2025
 
-ShredAI ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application (the "App").
+ShredAI ("ShredAI," "we," "our," or "us") provides an AI-powered body composition analysis mobile application (the "App"). We are committed to protecting your privacy and handling your personal information responsibly, transparently, and in compliance with global privacy laws, including the General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA), and applicable international data protection regulations.
 
-1. INFORMATION WE COLLECT
+By using ShredAI, you agree to the practices described in this Privacy Policy. If you do not agree, please discontinue use of the App.
 
-Personal Information:
-• Demographic Data: Sex, age, height, weight
-• Fitness Information: Exercise frequency, workout goals
-• Photographs: Body composition photos taken through the App
+1. ELIGIBILITY & CHILDREN'S PRIVACY (COPPA COMPLIANCE)
 
-Automatically Collected Information:
-• Device information (model, operating system)
-• Usage data (features used, session duration)
-• Technical data (IP address, error logs)
+ShredAI is intended for adults age 18 and older.
 
-2. HOW WE USE YOUR INFORMATION
+We do not knowingly collect, use, or store personal data from anyone under the age of 13. If we learn that a child under 13 has provided personal data, we will delete it immediately.
 
-We use the information we collect to:
-• Provide Services: Analyze body composition and calculate body fat percentage
-• AI Processing: Process your photos using OpenAI's GPT-4o Vision API for body composition analysis
-• Generate Workouts: Create personalized workout plans based on your goals and preferences
-• Improve Services: Analyze usage patterns to improve app functionality
-• Customer Support: Respond to your inquiries and provide support
+2. INFORMATION WE COLLECT
 
-3. DATA STORAGE AND PROCESSING
+A. Photographs (Personal Data)
 
-Where Your Data is Stored:
-• Photographs: Stored securely on Amazon Web Services (AWS) S3 cloud storage
-• Survey Data: Processed through our backend servers hosted on Vercel
-• Local Storage: Some data may be cached locally on your device
+We collect:
+• User-submitted body photos (front/back/side)
+• Metadata associated with photo uploads (timestamp, device type)
 
-Third-Party Services:
-We use the following third-party services:
-• OpenAI: Provides AI vision analysis services (GPT-4o)
-• AWS S3: Cloud storage for images
-• Vercel: Hosting provider for our backend services
+Purpose: Body composition analysis using AI.
+Processing: Photos are processed by OpenAI GPT-4o Vision API to extract estimated metrics.
+Storage: Photos are stored in secure, private AWS S3 buckets.
 
-4. DATA SECURITY
+OpenAI does not retain your photos after processing.
 
-We implement appropriate technical and organizational measures to protect your personal information:
-• Encryption: Data transmitted over the internet is encrypted using SSL/TLS
-• Access Controls: Limited access to personal data to authorized personnel only
-• Secure Storage: Images stored in private, encrypted S3 buckets
-• Regular Updates: Security practices reviewed and updated regularly
+B. Survey Data
 
-However, no method of transmission over the internet or electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your information, we cannot guarantee absolute security.
+You may optionally provide:
+• Biological sex
+• Date of birth/age
+• Height
+• Weight
+• Exercise frequency
+• Fitness goals
 
-5. DATA RETENTION
+Purpose: To improve the accuracy of body composition estimates and provide personalized insights.
 
-• Photographs: Stored until you delete your account or request deletion
-• Survey Data: Retained to provide ongoing services and historical tracking
-• Account Data: Retained while your account is active
+C. Usage Data
 
-You may request deletion of your data at any time by contacting us.
+We automatically collect:
+• Device information (model, OS version)
+• IP address
+• App interaction data
+• Error and crash logs
+• Subscription status
 
-6. YOUR RIGHTS
+Purpose: App functionality, security, fraud prevention, analytics, and improvement.
 
-You have the right to:
-• Access: Request access to your personal data
-• Correction: Request correction of inaccurate data
-• Deletion: Request deletion of your personal data
-• Portability: Request transfer of your data to another service
-• Objection: Object to processing of your personal data
+3. HOW WE USE YOUR INFORMATION
 
-To exercise these rights, please contact us at: privacy@shredai.app
+We use your personal data for:
+• Providing body composition analysis
+• Generating personalized fitness guidance
+• Improving the App and AI models
+• Maintaining account functionality
+• Processing subscriptions and payments
+• Responding to support requests
+• Ensuring safety, compliance, and fraud prevention
 
-7. CHILDREN'S PRIVACY
+We do not sell your data.
 
-Our App is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
+4. LEGAL BASES FOR PROCESSING (GDPR)
+
+For EU/EEA users, we rely on the following legal bases:
+• Consent: For processing photos and personal attributes.
+• Contract: To provide you the App and its features.
+• Legitimate Interest: App performance, analytics, and security.
+• Legal Obligation: Where required by law.
+
+5. THIRD-PARTY SERVICE PROVIDERS
+
+1. OpenAI (GPT-4o Vision API)
+• Processes body photos to generate analysis
+• Does not store or use your photos for training
+
+2. Amazon Web Services (AWS S3)
+• Stores photos in private, encrypted buckets
+
+3. Vercel
+• Hosts backend APIs
+• Receives requests containing user data necessary for processing
+
+4. Apple (In-App Purchases)
+• Handles payment processing
+• Provides device-level analytics
+• Does not receive your photos
+
+We only share data with these service providers as necessary to provide the App.
+
+6. DATA RETENTION
+
+We retain:
+• Photos: Until you delete them or request deletion
+• Account data: Until your account is deleted
+• Analytics & logs: Up to 24 months
+• Legal compliance data: As required by law
+
+You may delete your entire account and all associated data at any time.
+
+7. DATA SECURITY
+
+We use industry-standard protections, including:
+• Encrypted AWS S3 photo storage
+• HTTPS data transport
+• Access-controlled servers
+• Role-based data access
+• Zero retention by OpenAI
+
+No system can be 100% secure, but we take commercially reasonable steps to protect your information.
 
 8. INTERNATIONAL DATA TRANSFERS
 
-Your information may be transferred to and processed in countries other than your own, including the United States. These countries may have different data protection laws than your country. By using our App, you consent to the transfer of your information to these countries.
+Your information may be transferred to servers located in the United States and other countries. We rely on:
+• Standard Contractual Clauses (SCCs)
+• Adequacy decisions where applicable
 
-9. CHANGES TO THIS PRIVACY POLICY
+9. YOUR RIGHTS
 
-We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy in the App and updating the "Last Updated" date. Your continued use of the App after any changes constitutes acceptance of the new Privacy Policy.
+GDPR Rights:
+You may request:
+• Access to your data
+• Correction
+• Deletion
+• Restriction of processing
+• Data portability
+• Withdrawal of consent
 
-10. CALIFORNIA PRIVACY RIGHTS
+CCPA Rights (California):
+You have the right to:
+• Know what data is collected
+• Request deletion
+• Opt out of data sale (we do not sell data)
+• Non-discrimination for exercising your rights
 
-If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):
-• Right to know what personal information is collected
-• Right to delete personal information
-• Right to opt-out of the sale of personal information (we do not sell your data)
+To exercise rights, email: privacy@shredai.app
 
-11. CONTACT US
+10. YOUR CHOICES
 
-If you have questions about this Privacy Policy or our data practices, please contact us:
+• You may delete photos individually or delete your entire account.
+• You may revoke camera access at any time.
+• You may unsubscribe from marketing emails (if applicable).
+• You may disable analytics collection on your device.
 
-Email: privacy@shredai.app
+11. CHANGES TO THIS POLICY
+
+We may update this Privacy Policy as needed. We will post updates and revise the "Last Updated" date.
+
+12. CONTACT INFORMATION
+
+Privacy Inquiries: privacy@shredai.app
+Support: privacy@shredai.app
 Website: https://shredai.app
-
-12. CONSENT
-
-By using ShredAI, you consent to this Privacy Policy and agree to its terms.
-
-Effective Date: November 1, 2024
-Version: 1.0
 `;
 
 export default function PrivacyPolicyScreen() {

@@ -6,14 +6,16 @@ import {
   Animated,
   Alert,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore, CameraAngle } from '../state/surveyStore';
 import { detectHuman, HumanDetectionResponse } from '../api/humanDetectionApi';
 import { Button } from '../components/ui';
+import colors from '../constants/colors';
 
 type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Camera'>;
 
@@ -27,9 +29,16 @@ interface SetupQuality {
   overall: number; // 0-100
 }
 
+const CAMERA_ANGLES: CameraAngle[] = ['front', 'side', 'back'];
+
 export default function CameraScreen() {
   const navigation = useNavigation<CameraScreenNavigationProp>();
-  const { setCapturedImage } = useSurveyStore();
+  const { 
+    addCapturedImage, 
+    capturedImages, 
+    currentAngle, 
+    setCurrentAngle 
+  } = useSurveyStore();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [cameraType, setCameraType] = useState<CameraType>('front');
   const [countdown, setCountdown] = useState(5);
@@ -37,6 +46,10 @@ export default function CameraScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [humanDetected, setHumanDetected] = useState<boolean | null>(null);
   const [detectionMessage, setDetectionMessage] = useState<string>('');
+  
+  // Get current angle index
+  const currentAngleIndex = CAMERA_ANGLES.indexOf(currentAngle);
+  const isLastAngle = currentAngleIndex === CAMERA_ANGLES.length - 1;
   const [setupQuality, setSetupQuality] = useState<SetupQuality>({
     lighting: 'poor',
     angle: 'poor',
@@ -44,10 +57,13 @@ export default function CameraScreen() {
     pose: 'poor',
     overall: 0
   });
-  const [showSetupGuide, setShowSetupGuide] = useState(true);
+  const [showSetupGuide, setShowSetupGuide] = useState(false); // Collapsed by default
+  const [showQualityDetails, setShowQualityDetails] = useState(false); // Collapsed by default
   const cameraRef = useRef<any>(null);
   const countdownAnim = useRef(new Animated.Value(1)).current;
   const qualityCheckInterval = useRef<NodeJS.Timeout | null>(null);
+  const qualityDetailsAnim = useRef(new Animated.Value(0)).current;
+  const tipsAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     (async () => {
@@ -99,6 +115,40 @@ export default function CameraScreen() {
     };
   }, [hasPermission]);
 
+  // Initialize quality details animation
+  useEffect(() => {
+    if (showQualityDetails) {
+      Animated.timing(qualityDetailsAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(qualityDetailsAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [showQualityDetails]);
+
+  // Initialize tips animation
+  useEffect(() => {
+    if (showSetupGuide) {
+      Animated.timing(tipsAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(tipsAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [showSetupGuide]);
+
   const startQualityMonitoring = () => {
     // Simulate real-time quality analysis
     qualityCheckInterval.current = setInterval(() => {
@@ -130,11 +180,11 @@ export default function CameraScreen() {
     return Math.min(100, total);
   };
 
-  const getQualityColor = (quality: 'optimal' | 'good' | 'poor') => {
+  const   getQualityColor = (quality: 'optimal' | 'good' | 'poor') => {
     switch (quality) {
-      case 'optimal': return '#00FF00';
-      case 'good': return '#FFFF00';
-      case 'poor': return '#FF0000';
+      case 'optimal': return colors.success;
+      case 'good': return colors.warning;
+      case 'poor': return colors.error;
     }
   };
 
@@ -152,14 +202,33 @@ export default function CameraScreen() {
     if (setupQuality.lighting === 'poor') {
       feedback.push('Move to better lighting or turn on more lights');
     }
-    if (setupQuality.angle === 'poor') {
-      feedback.push('Face camera directly, avoid side angles');
+    
+    // Angle-specific feedback
+    if (currentAngle === 'front') {
+      if (setupQuality.angle === 'poor') {
+        feedback.push('Face camera directly, look straight ahead');
+      }
+      if (setupQuality.pose === 'poor') {
+        feedback.push('Show upper body clearly, arms slightly away from sides');
+      }
+    } else if (currentAngle === 'side') {
+      if (setupQuality.angle === 'poor') {
+        feedback.push('Turn 90° to face your profile, keep shoulders square');
+      }
+      if (setupQuality.pose === 'poor') {
+        feedback.push('Stand straight, don\'t lean forward or backward');
+      }
+    } else if (currentAngle === 'back') {
+      if (setupQuality.angle === 'poor') {
+        feedback.push('Turn completely around, back facing camera');
+      }
+      if (setupQuality.pose === 'poor') {
+        feedback.push('Stand straight, arms slightly away from sides');
+      }
     }
+    
     if (setupQuality.distance === 'poor') {
       feedback.push('Stand 3-6 feet from camera');
-    }
-    if (setupQuality.pose === 'poor') {
-      feedback.push('Show upper body clearly, arms slightly away from sides');
     }
     
     if (feedback.length === 0) {
@@ -167,6 +236,32 @@ export default function CameraScreen() {
     }
     
     return feedback;
+  };
+
+  const getAngleInstructions = (): string => {
+    switch (currentAngle) {
+      case 'front':
+        return 'Face the camera directly. Keep your arms slightly away from your sides.';
+      case 'side':
+        return 'Turn 90° to show your profile. Keep your shoulders square and stand straight.';
+      case 'back':
+        return 'Turn completely around. Your back should face the camera.';
+      default:
+        return 'Position yourself in the frame';
+    }
+  };
+
+  const getAngleTitle = (): string => {
+    switch (currentAngle) {
+      case 'front':
+        return 'Front View';
+      case 'side':
+        return 'Side View';
+      case 'back':
+        return 'Back View';
+      default:
+        return 'Camera';
+    }
   };
 
   const startCountdown = () => {
@@ -210,13 +305,21 @@ export default function CameraScreen() {
         setDetectionMessage(detectionResult.message);
         
         if (detectionResult.humanDetected) {
-          // Human detected, proceed with the photo
-          setCapturedImage(photo.base64 || '');
+          // Human detected, save the photo with current angle
+          addCapturedImage(currentAngle, photo.base64 || '');
           setIsCountingDown(false);
           setCountdown(5);
           
-          // Navigate to loading screen
-          navigation.navigate('Loading');
+          // If not last angle, move to next angle
+          if (!isLastAngle) {
+            const nextAngleIndex = currentAngleIndex + 1;
+            setCurrentAngle(CAMERA_ANGLES[nextAngleIndex]);
+            setHumanDetected(null);
+            setDetectionMessage('');
+          } else {
+            // All angles captured, navigate to loading screen
+            navigation.navigate('Loading');
+          }
         } else {
           // No human detected, show error and allow retake
           setIsCountingDown(false);
@@ -322,6 +425,25 @@ export default function CameraScreen() {
             ✕
           </Button>
           
+          {/* Angle Progress */}
+          <View style={styles.angleProgress}>
+            <Text style={styles.angleProgressText}>
+              {currentAngleIndex + 1}/{CAMERA_ANGLES.length}
+            </Text>
+            <View style={styles.angleIndicators}>
+              {CAMERA_ANGLES.map((angle, idx) => (
+                <View
+                  key={angle}
+                  style={[
+                    styles.angleDot,
+                    capturedImages.some(img => img.angle === angle) && styles.angleDotCompleted,
+                    idx === currentAngleIndex && styles.angleDotCurrent,
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+          
           <Button
             variant="ghost"
             size="sm"
@@ -332,45 +454,103 @@ export default function CameraScreen() {
           </Button>
         </View>
 
-        {/* Setup Quality Display */}
-        <View style={styles.qualityContainer}>
-          <Text style={styles.qualityTitle}>Setup Quality: {setupQuality.overall}%</Text>
-          <View style={styles.qualityGrid}>
-            <View style={styles.qualityItem}>
-              <Text style={styles.qualityLabel}>Lighting</Text>
-              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.lighting) }]}>
-                {getQualityIcon(setupQuality.lighting)}
-              </Text>
-            </View>
-            <View style={styles.qualityItem}>
-              <Text style={styles.qualityLabel}>Angle</Text>
-              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.angle) }]}>
-                {getQualityIcon(setupQuality.angle)}
-              </Text>
-            </View>
-            <View style={styles.qualityItem}>
-              <Text style={styles.qualityLabel}>Distance</Text>
-              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.distance) }]}>
-                {getQualityIcon(setupQuality.distance)}
-              </Text>
-            </View>
-            <View style={styles.qualityItem}>
-              <Text style={styles.qualityLabel}>Pose</Text>
-              <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.pose) }]}>
-                {getQualityIcon(setupQuality.pose)}
-              </Text>
-            </View>
-          </View>
+        {/* Angle Title */}
+        <View style={styles.angleTitleContainer}>
+          <Text style={styles.angleTitle}>{getAngleTitle()}</Text>
+          <Text style={styles.angleSubtitle}>{getAngleInstructions()}</Text>
         </View>
 
-        {/* Real-time Setup Feedback */}
-        <View style={styles.feedbackContainer}>
-          {getSetupFeedback().map((feedback, index) => (
-            <Text key={index} style={styles.feedbackText}>
-              {feedback}
+        {/* Compact Quality Indicator */}
+        <TouchableOpacity
+          style={[
+            styles.qualityIndicator,
+            setupQuality.overall >= 70 && styles.qualityIndicatorGood,
+            setupQuality.overall < 50 && styles.qualityIndicatorPoor
+          ]}
+          onPress={() => {
+            setShowQualityDetails(!showQualityDetails);
+            Animated.timing(qualityDetailsAnim, {
+              toValue: showQualityDetails ? 0 : 1,
+              duration: 300,
+              useNativeDriver: false,
+            }).start();
+          }}
+          activeOpacity={0.8}
+        >
+          <View style={styles.qualityIndicatorRow}>
+            <Text style={styles.qualityIndicatorLabel}>
+              {setupQuality.overall >= 70 ? '✓ Ready' : setupQuality.overall >= 50 ? '⚠ Needs Improvement' : '✗ Poor Setup'}
             </Text>
-          ))}
-        </View>
+            <Text style={styles.qualityIndicatorPercent}>{setupQuality.overall}%</Text>
+          </View>
+          <View style={styles.qualityProgressBar}>
+            <View
+              style={[
+                styles.qualityProgressFill,
+                {
+                  width: `${setupQuality.overall}%`,
+                  backgroundColor: getQualityColor(setupQuality.overall >= 70 ? 'optimal' : setupQuality.overall >= 50 ? 'good' : 'poor')
+                }
+              ]}
+            />
+          </View>
+        </TouchableOpacity>
+
+        {/* Expandable Quality Details */}
+        {showQualityDetails && (
+          <Animated.View
+            style={[
+              styles.qualityDetailsContainer,
+              {
+                opacity: qualityDetailsAnim,
+                transform: [
+                  {
+                    translateY: qualityDetailsAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.qualityGrid}>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityLabel}>Lighting</Text>
+                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.lighting) }]}>
+                  {getQualityIcon(setupQuality.lighting)}
+                </Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityLabel}>Angle</Text>
+                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.angle) }]}>
+                  {getQualityIcon(setupQuality.angle)}
+                </Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityLabel}>Distance</Text>
+                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.distance) }]}>
+                  {getQualityIcon(setupQuality.distance)}
+                </Text>
+              </View>
+              <View style={styles.qualityItem}>
+                <Text style={styles.qualityLabel}>Pose</Text>
+                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.pose) }]}>
+                  {getQualityIcon(setupQuality.pose)}
+                </Text>
+              </View>
+            </View>
+            {getSetupFeedback().length > 0 && (
+              <View style={styles.feedbackList}>
+                {getSetupFeedback().map((feedback, index) => (
+                  <Text key={index} style={styles.feedbackText}>
+                    • {feedback}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </Animated.View>
+        )}
 
         {/* Center countdown */}
         {isCountingDown && (
@@ -419,12 +599,31 @@ export default function CameraScreen() {
               ? `Photo will be taken in ${countdown} seconds`
               : humanDetected === false
               ? 'Position yourself clearly in the frame'
-              : 'Position yourself in the frame and tap the button below'}
+              : getAngleInstructions()}
           </Text>
           
-          {/* Positioning tips */}
+          {/* Collapsible Positioning tips */}
           {!isCountingDown && humanDetected === null && (
-            <View style={styles.tipsContainer}>
+            <TouchableOpacity
+              style={styles.tipsToggle}
+              onPress={() => setShowSetupGuide(!showSetupGuide)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tipsToggleText}>
+                {showSetupGuide ? '▼ Hide Tips' : '▶ Setup Tips'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {showSetupGuide && !isCountingDown && humanDetected === null && (
+            <Animated.View
+              style={[
+                styles.tipsContainer,
+                {
+                  opacity: tipsAnim,
+                }
+              ]}
+            >
               <Text style={styles.tipsTitle}>📸 Optimal Setup Guide:</Text>
               <Text style={styles.tipText}>• Stand 3-6 feet from camera</Text>
               <Text style={styles.tipText}>• Face camera directly, avoid side angles</Text>
@@ -432,7 +631,7 @@ export default function CameraScreen() {
               <Text style={styles.tipText}>• Show upper body clearly, arms slightly away</Text>
               <Text style={styles.tipText}>• Remove loose clothing for accurate analysis</Text>
               <Text style={styles.tipText}>• Avoid shadows and harsh backlighting</Text>
-            </View>
+            </Animated.View>
           )}
         </View>
 
@@ -445,6 +644,11 @@ export default function CameraScreen() {
           >
             <View style={styles.shutterButtonInner} />
           </Button>
+          {!isLastAngle && capturedImages.some(img => img.angle === currentAngle) && (
+            <Text style={styles.nextAngleHint}>
+              Tap to retake or continue to next angle →
+            </Text>
+          )}
         </View>
       </View>
     </View>
@@ -516,7 +720,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -529,7 +733,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -542,29 +746,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   countdownText: {
-    fontSize: 120,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    fontSize: 110,
+    fontWeight: '600',
+    color: colors.surface,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   instructionsContainer: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 140,
     left: 0,
     right: 0,
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   instructionsText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.surface,
+    fontSize: 15,
     textAlign: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    fontWeight: '500',
   },
   bottomControls: {
     position: 'absolute',
@@ -577,11 +782,11 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   shutterButtonDisabled: {
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
@@ -590,9 +795,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#000000',
+    backgroundColor: colors.textPrimary,
   },
   text: {
     color: '#FFFFFF',
@@ -622,14 +825,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   errorText: {
-    color: '#FF0000',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: colors.error,
+    fontSize: 22,
+    fontWeight: '600',
     textAlign: 'center',
   },
   errorSubtext: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.surface,
+    fontSize: 15,
     textAlign: 'center',
     marginTop: 5,
   },
@@ -642,14 +845,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   successText: {
-    color: '#00FF00',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: colors.success,
+    fontSize: 22,
+    fontWeight: '600',
     textAlign: 'center',
   },
   successSubtext: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.surface,
+    fontSize: 15,
     textAlign: 'center',
     marginTop: 5,
   },
@@ -662,84 +865,212 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   analyzingText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: colors.surface,
+    fontSize: 19,
+    fontWeight: '600',
     textAlign: 'center',
   },
   analyzingSubtext: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 14,
     textAlign: 'center',
     marginTop: 5,
+    opacity: 0.9,
   },
   tipsContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 10,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.overlay,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   tipsTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: colors.surface,
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 10,
   },
   tipText: {
-    color: '#FFFFFF',
+    color: colors.surface,
     fontSize: 14,
     textAlign: 'left',
     marginBottom: 5,
+    opacity: 0.9,
   },
-  qualityContainer: {
+  qualityIndicator: {
     position: 'absolute',
     top: 100,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.overlay,
+    borderRadius: 8,
+    padding: 16,
     zIndex: 2,
   },
-  qualityTitle: {
+  qualityIndicatorGood: {
+    backgroundColor: colors.overlay,
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  qualityIndicatorPoor: {
+    backgroundColor: colors.overlay,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  qualityIndicatorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  qualityIndicatorLabel: {
     color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  qualityIndicatorPercent: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  qualityProgressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  qualityProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+    transition: 'width 0.3s ease',
+  },
+  qualityDetailsContainer: {
+    position: 'absolute',
+    top: 180,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.overlay,
+    borderRadius: 8,
+    padding: 16,
+    zIndex: 2,
+    marginTop: 8,
   },
   qualityGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '100%',
+    marginBottom: 12,
   },
   qualityItem: {
     alignItems: 'center',
   },
   qualityLabel: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 12,
     marginBottom: 5,
+    opacity: 0.8,
   },
   qualityScore: {
-    fontSize: 40,
+    fontSize: 28,
   },
-  feedbackContainer: {
+  feedbackList: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  feedbackText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'left',
+    marginBottom: 4,
+    opacity: 0.9,
+  },
+  angleProgress: {
+    backgroundColor: colors.overlay,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  angleProgressText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  angleIndicators: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  angleDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  angleDotCompleted: {
+    backgroundColor: colors.success,
+  },
+  angleDotCurrent: {
+    backgroundColor: colors.accent,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  angleTitleContainer: {
     position: 'absolute',
-    top: 200,
+    top: 120,
     left: 0,
     right: 0,
     alignItems: 'center',
     paddingHorizontal: 20,
-    zIndex: 2,
+    zIndex: 3,
   },
-  feedbackText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  angleTitle: {
+    color: colors.surface,
+    fontSize: 26,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  angleSubtitle: {
+    color: colors.surface,
+    fontSize: 15,
+    textAlign: 'center',
+    opacity: 0.95,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    paddingHorizontal: 30,
+  },
+  nextAngleHint: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    opacity: 0.8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  tipsToggle: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  tipsToggleText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

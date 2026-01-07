@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import colors from '../../constants/colors';
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -60,27 +61,17 @@ const styles = StyleSheet.create({
   
   // Variants
   default: {
-    backgroundColor: '#000000',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.textPrimary,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#000000',
+    borderWidth: 1,
+    borderColor: colors.textPrimary,
   },
   selected: {
-    backgroundColor: '#ffffff',
-    borderWidth: 4,
-    borderColor: '#000000',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.accent,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -112,25 +103,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   defaultText: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '500',
   },
   outlineText: {
-    color: '#000000',
-    fontSize: 14,
+    color: colors.textPrimary,
+    fontSize: 15,
   },
   selectedText: {
-    color: '#000000',
-    fontSize: 14,
+    color: colors.textPrimary,
+    fontSize: 15,
     fontWeight: '600',
   },
   ghostText: {
-    color: '#000000',
-    fontSize: 14,
+    color: colors.textPrimary,
+    fontSize: 15,
   },
   linkText: {
-    color: '#000000',
-    fontSize: 14,
+    color: colors.accent,
+    fontSize: 15,
     textDecorationLine: 'underline',
   },
   smText: {
@@ -142,9 +134,9 @@ const styles = StyleSheet.create({
   
   // States
   disabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   disabledText: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
 });

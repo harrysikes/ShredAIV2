@@ -11,8 +11,11 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +23,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import ProgressBar from '../components/ProgressBar';
 import { Button, Card, CardContent } from '../components/ui';
+import colors from '../constants/colors';
 
 type SurveyScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Survey'>;
 
@@ -62,41 +66,54 @@ export default function SurveyScreen() {
   const navigation = useNavigation<SurveyScreenNavigationProp>();
   const { surveyData, currentStep, setSurveyData, setCurrentStep } = useSurveyStore();
   const [slideAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(1));
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.95));
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(surveyData.dateOfBirth?.getFullYear() || new Date().getFullYear() - 25);
-  const [selectedMonth, setSelectedMonth] = useState(surveyData.dateOfBirth?.getMonth() || 0);
-  const [selectedDay, setSelectedDay] = useState(surveyData.dateOfBirth?.getDate() || 1);
+  const [tempDate, setTempDate] = useState(
+    surveyData.dateOfBirth || new Date(new Date().setFullYear(new Date().getFullYear() - 25))
+  );
   const [showHeightPicker, setShowHeightPicker] = useState(false);
   const [selectedFeet, setSelectedFeet] = useState(surveyData.height?.feet || 5);
   const [selectedInches, setSelectedInches] = useState(surveyData.height?.inches || 0);
   const [isWeightEditing, setIsWeightEditing] = useState(false);
   const [weightInputValue, setWeightInputValue] = useState(surveyData.weight?.value?.toString() || '150');
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showDayPicker, setShowDayPicker] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [workoutFrequencyValue, setWorkoutFrequencyValue] = useState(() => {
+    // Map old values to new 0-7 scale
+    const mapping: Record<string, number> = {
+      'never': 0,
+      'rarely': 1,
+      'sometimes': 2,
+      'often': 4,
+      'very-often': 6,
+    };
+    return mapping[surveyData.exerciseFrequency || 'never'] || 3;
+  });
 
   useEffect(() => {
+    // Reset animations for new step
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.95);
+    
     Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
+      Animated.spring(fadeAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
-      Animated.timing(fadeAnim, {
+      Animated.spring(scaleAnim, {
         toValue: 1,
-        duration: 300,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [currentStep, slideAnim, fadeAnim]);
+  }, [currentStep, fadeAnim, scaleAnim]);
 
-  // Update selected date values when survey data changes
+  // Update temp date when survey data changes
   useEffect(() => {
     if (surveyData.dateOfBirth) {
-      setSelectedYear(surveyData.dateOfBirth.getFullYear());
-      setSelectedMonth(surveyData.dateOfBirth.getMonth());
-      setSelectedDay(surveyData.dateOfBirth.getDate());
+      setTempDate(surveyData.dateOfBirth);
     }
   }, [surveyData.dateOfBirth]);
 
@@ -115,28 +132,6 @@ export default function SurveyScreen() {
     }
   }, [surveyData.weight?.value]);
 
-  // Initialize date picker values when component mounts
-  useEffect(() => {
-    const today = new Date();
-    if (!surveyData.dateOfBirth) {
-      setSelectedYear(today.getFullYear() - 18); // Default to 18 years ago
-      setSelectedMonth(today.getMonth());
-      setSelectedDay(today.getDate());
-    } else {
-      // If we have a date, use it to initialize the pickers
-      setSelectedYear(surveyData.dateOfBirth.getFullYear());
-      setSelectedMonth(surveyData.dateOfBirth.getMonth());
-      setSelectedDay(surveyData.dateOfBirth.getDate());
-    }
-  }, [surveyData.dateOfBirth]);
-
-  // Update selected day when month or year changes to prevent invalid dates
-  useEffect(() => {
-    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-    if (selectedDay > daysInMonth) {
-      setSelectedDay(daysInMonth);
-    }
-  }, [selectedMonth, selectedYear, selectedDay]);
 
   const handleNext = () => {
     if (currentStep < SURVEY_STEPS.length) {
@@ -158,23 +153,23 @@ export default function SurveyScreen() {
       <Text style={styles.questionTitle}>{SURVEY_STEPS[0].title}</Text>
       <Text style={styles.questionSubtitle}>{SURVEY_STEPS[0].subtitle}</Text>
       
-      <View style={styles.optionsContainer}>
+      <View style={styles.sexOptionsContainer}>
         <TouchableOpacity
           style={[
-            styles.radioOption,
-            surveyData.sex === 'male' && styles.radioOptionSelected
+            styles.sexOptionBox,
+            surveyData.sex === 'male' && styles.sexOptionBoxSelected
           ]}
           onPress={() => setSurveyData({ sex: 'male' })}
         >
-          <View style={[
-            styles.radioButton,
-            surveyData.sex === 'male' && styles.radioButtonSelected
-          ]}>
-            {surveyData.sex === 'male' && <View style={styles.radioButtonInner} />}
-          </View>
           <Text style={[
-            styles.radioOptionText,
-            surveyData.sex === 'male' && styles.radioOptionTextSelected
+            styles.sexSymbol,
+            surveyData.sex === 'male' && styles.sexSymbolSelected
+          ]}>
+            ♂
+          </Text>
+          <Text style={[
+            styles.sexLabel,
+            surveyData.sex === 'male' && styles.sexLabelSelected
           ]}>
             Male
           </Text>
@@ -182,20 +177,20 @@ export default function SurveyScreen() {
 
         <TouchableOpacity
           style={[
-            styles.radioOption,
-            surveyData.sex === 'female' && styles.radioOptionSelected
+            styles.sexOptionBox,
+            surveyData.sex === 'female' && styles.sexOptionBoxSelected
           ]}
           onPress={() => setSurveyData({ sex: 'female' })}
         >
-          <View style={[
-            styles.radioButton,
-            surveyData.sex === 'female' && styles.radioButtonSelected
-          ]}>
-            {surveyData.sex === 'female' && <View style={styles.radioButtonInner} />}
-          </View>
           <Text style={[
-            styles.radioOptionText,
-            surveyData.sex === 'female' && styles.radioOptionTextSelected
+            styles.sexSymbol,
+            surveyData.sex === 'female' && styles.sexSymbolSelected
+          ]}>
+            ♀
+          </Text>
+          <Text style={[
+            styles.sexLabel,
+            surveyData.sex === 'female' && styles.sexLabelSelected
           ]}>
             Female
           </Text>
@@ -205,32 +200,31 @@ export default function SurveyScreen() {
   );
 
   const renderDateOfBirthStep = () => {
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    const getDaysInMonth = (month: number, year: number) => {
-      return new Date(year, month + 1, 0).getDate();
-    };
-    
-    const days = Array.from({ length: getDaysInMonth(selectedMonth, selectedYear) }, (_, i) => i + 1);
 
-    const handleDateConfirm = () => {
-      const newDate = new Date(selectedYear, selectedMonth, selectedDay);
-      setSurveyData({ dateOfBirth: newDate });
+    const handleDateChange = (event: any, selectedDate?: Date) => {
+      if (Platform.OS === 'ios') {
+        if (selectedDate) {
+          setTempDate(selectedDate);
+        }
+      } else {
+        setShowDatePicker(false);
+        if (selectedDate) {
+          setSurveyData({ dateOfBirth: selectedDate });
+        }
+      }
+    };
+
+    const handleIOSDateConfirm = () => {
+      setSurveyData({ dateOfBirth: tempDate });
       setShowDatePicker(false);
     };
 
-    // Initialize with current date if not set
-    const initializeDate = () => {
-      if (!surveyData.dateOfBirth) {
-        const today = new Date();
-        setSelectedYear(today.getFullYear() - 18); // Default to 18 years ago
-        setSelectedMonth(today.getMonth());
-        setSelectedDay(today.getDate());
-      }
+    const formatDate = (date: Date) => {
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     };
 
     return (
@@ -238,287 +232,143 @@ export default function SurveyScreen() {
         <Text style={styles.questionTitle}>{SURVEY_STEPS[1].title}</Text>
         <Text style={styles.questionSubtitle}>{SURVEY_STEPS[1].subtitle}</Text>
         
-        {!showDatePicker ? (
-          <View style={styles.dateDisplayContainer}>
+        <View style={styles.dateDisplayContainer}>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
             <Text style={styles.dateDisplayText}>
               {surveyData.dateOfBirth
-                ? `${months[surveyData.dateOfBirth.getMonth()]} ${surveyData.dateOfBirth.getDate()}, ${surveyData.dateOfBirth.getFullYear()}`
-                : 'Not selected'}
+                ? formatDate(surveyData.dateOfBirth)
+                : 'Tap to select date'}
             </Text>
-            <Button
-              variant="outline"
-              onPress={() => setShowDatePicker(true)}
-              style={styles.datePickerButton}
-            >
-              Select Date
-            </Button>
-          </View>
-        ) : (
-          <View style={styles.datePickerContainer}>
-            <View style={styles.datePickerRow}>
-              <View style={styles.datePickerColumn}>
-                <Text style={styles.datePickerLabel}>Month</Text>
-                <TouchableOpacity
-                  style={styles.customPickerButton}
-                  onPress={() => setShowMonthPicker(true)}
-                >
-                  <Text style={styles.customPickerButtonText}>
-                    {months[selectedMonth] || 'Select Month'}
-                  </Text>
-                </TouchableOpacity>
-
-              </View>
-              
-              <View style={styles.datePickerColumn}>
-                <Text style={styles.datePickerLabel}>Day</Text>
-                <TouchableOpacity
-                  style={styles.customPickerButton}
-                  onPress={() => setShowDayPicker(true)}
-                >
-                  <Text style={styles.customPickerButtonText}>
-                    {selectedDay || 'Select Day'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.yearColumn}>
-                <Text style={styles.datePickerLabel}>Year</Text>
-                <TouchableOpacity
-                  style={styles.yearPickerButton}
-                  onPress={() => setShowYearPicker(true)}
-                >
-                  <Text style={styles.customPickerButtonText}>
-                    {selectedYear || 'Select Year'}
-                  </Text>
-                </TouchableOpacity>
-
-              </View>
-            </View>
-            
-            <View style={styles.datePickerActions}>
-              <Button
-                variant="outline"
-                onPress={() => setShowDatePicker(false)}
-                style={styles.datePickerButton}
+          </TouchableOpacity>
+          
+          {Platform.OS === 'ios' ? (
+            showDatePicker && (
+              <Modal
+                visible={showDatePicker}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowDatePicker(false)}
               >
-                Cancel
-              </Button>
-              <Button
-                onPress={handleDateConfirm}
-                style={styles.datePickerButton}
-              >
-                Confirm
-              </Button>
-            </View>
-          </View>
-        )}
-
-        {/* Month Picker Modal */}
-        <Modal
-          visible={showMonthPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowMonthPicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Month (3-letter)</Text>
-              <ScrollView style={styles.modalScrollView}>
-                {months.map((month, index) => (
-                  <TouchableOpacity
-                    key={month}
-                    style={[
-                      styles.modalOption,
-                      selectedMonth === index && styles.modalOptionSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedMonth(index);
-                      setShowMonthPicker(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      selectedMonth === index && styles.modalOptionTextSelected
-                    ]}>
-                      {month}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowMonthPicker(false)}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Day Picker Modal */}
-        <Modal
-          visible={showDayPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowDayPicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Day</Text>
-              <ScrollView style={styles.modalScrollView}>
-                {days.map((day) => (
-                  <TouchableOpacity
-                    key={day}
-                    style={[
-                      styles.modalOption,
-                      selectedDay === day && styles.modalOptionSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedDay(day);
-                      setShowDayPicker(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      selectedDay === day && styles.modalOptionTextSelected
-                    ]}>
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowDayPicker(false)}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Year Picker Modal */}
-        <Modal
-          visible={showYearPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowYearPicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, styles.yearPickerModal]}>
-              <Text style={styles.modalTitle}>Select Year</Text>
-              <ScrollView style={styles.modalScrollView}>
-                {years.map((year) => (
-                  <TouchableOpacity
-                    key={year}
-                    style={[
-                      styles.modalOption,
-                      styles.yearPickerOption,
-                      selectedYear === year && styles.modalOptionSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedYear(year);
-                      setShowYearPicker(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      selectedYear === year && styles.modalOptionTextSelected
-                    ]}>
-                      {year}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowYearPicker(false)}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+                <View style={styles.iosDatePickerModal}>
+                  <View style={styles.iosDatePickerContainer}>
+                    <View style={styles.iosDatePickerHeader}>
+                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                        <Text style={styles.iosDatePickerCancel}>Cancel</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.iosDatePickerTitle}>Select Date</Text>
+                      <TouchableOpacity onPress={handleIOSDateConfirm}>
+                        <Text style={styles.iosDatePickerDone}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={tempDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={handleDateChange}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1900, 0, 1)}
+                      textColor={colors.textPrimary}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            )
+          ) : (
+            showDatePicker && (
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+                minimumDate={new Date(1900, 0, 1)}
+              />
+            )
+          )}
+        </View>
       </View>
     );
   };
 
-  const renderHeightStep = () => (
-    <View style={styles.questionContainer}>
-      <Text style={styles.questionTitle}>{SURVEY_STEPS[2].title}</Text>
-      <Text style={styles.questionSubtitle}>{SURVEY_STEPS[2].subtitle}</Text>
-      
-      {!showHeightPicker ? (
+  const renderHeightStep = () => {
+    const handleHeightConfirm = () => {
+      setSurveyData({ height: { feet: selectedFeet, inches: selectedInches } });
+      setShowHeightPicker(false);
+    };
+
+    return (
+      <View style={styles.questionContainer}>
+        <Text style={styles.questionTitle}>{SURVEY_STEPS[2].title}</Text>
+        <Text style={styles.questionSubtitle}>{SURVEY_STEPS[2].subtitle}</Text>
+        
         <View style={styles.heightDisplayContainer}>
-          <Text style={styles.heightDisplayText}>
-            {surveyData.height
-              ? `${surveyData.height.feet}' ${surveyData.height.inches}"`
-              : 'Not selected'}
-          </Text>
-          <Button
-            variant="outline"
-            onPress={() => setShowHeightPicker(true)}
-            style={styles.heightPickerButton}
-          >
-            Select Height
-          </Button>
-        </View>
-      ) : (
-        <View style={styles.heightPickerContainer}>
-          <View style={styles.heightPickerRow}>
-            <View style={styles.heightPickerColumn}>
-              <Text style={styles.heightPickerLabel}>Feet</Text>
-              <Picker
-                selectedValue={selectedFeet || 5}
-                onValueChange={(itemValue: number) => setSelectedFeet(itemValue)}
-                style={styles.picker}
-                mode="dialog"
-                enabled={true}
-              >
-                {Array.from({ length: 8 }, (_, i) => i + 1).map((feet) => (
-                  <Picker.Item key={feet} label={feet.toString()} value={feet} />
-                ))}
-              </Picker>
-            </View>
-            
-            <View style={styles.heightPickerColumn}>
-              <Text style={styles.heightPickerLabel}>Inches</Text>
-              <Picker
-                selectedValue={selectedInches || 0}
-                onValueChange={(itemValue: number) => setSelectedInches(itemValue)}
-                style={styles.picker}
-                mode="dialog"
-                enabled={true}
-              >
-                {Array.from({ length: 12 }, (_, i) => i).map((inches) => (
-                  <Picker.Item key={inches} label={inches.toString()} value={inches} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+          <TouchableOpacity onPress={() => setShowHeightPicker(true)} activeOpacity={0.7}>
+            <Text style={styles.heightDisplayText}>
+              {surveyData.height
+                ? `${surveyData.height.feet}'${surveyData.height.inches}"`
+                : 'Tap to select height'}
+            </Text>
+          </TouchableOpacity>
           
-          <View style={styles.heightPickerActions}>
-            <Button
-              variant="outline"
-              onPress={() => setShowHeightPicker(false)}
-              style={styles.heightPickerButton}
+          {showHeightPicker && (
+            <Modal
+              visible={showHeightPicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowHeightPicker(false)}
             >
-              Cancel
-            </Button>
-            <Button
-              onPress={() => {
-                setSurveyData({ height: { feet: selectedFeet, inches: selectedInches } });
-                setShowHeightPicker(false);
-              }}
-              style={styles.heightPickerButton}
-            >
-              Confirm
-            </Button>
-          </View>
+              <View style={styles.iosHeightPickerModal}>
+                <View style={styles.iosHeightPickerContainer}>
+                  <View style={styles.iosHeightPickerHeader}>
+                    <TouchableOpacity onPress={() => setShowHeightPicker(false)}>
+                      <Text style={styles.iosHeightPickerCancel}>Cancel</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.iosHeightPickerTitle}>Select Height</Text>
+                    <TouchableOpacity onPress={handleHeightConfirm}>
+                      <Text style={styles.iosHeightPickerDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.heightPickerRow}>
+                    <View style={styles.heightPickerColumn}>
+                      <Text style={styles.heightPickerLabel}>Feet</Text>
+                      <Picker
+                        selectedValue={selectedFeet || 5}
+                        onValueChange={(itemValue: number) => setSelectedFeet(itemValue)}
+                        style={styles.picker}
+                        mode="dialog"
+                        enabled={true}
+                        itemStyle={styles.pickerItem}
+                      >
+                        {Array.from({ length: 8 }, (_, i) => i + 1).map((feet) => (
+                          <Picker.Item key={feet} label={feet.toString()} value={feet} />
+                        ))}
+                      </Picker>
+                    </View>
+                    
+                    <View style={styles.heightPickerColumn}>
+                      <Text style={styles.heightPickerLabel}>Inches</Text>
+                      <Picker
+                        selectedValue={selectedInches || 0}
+                        onValueChange={(itemValue: number) => setSelectedInches(itemValue)}
+                        style={styles.picker}
+                        mode="dialog"
+                        enabled={true}
+                        itemStyle={styles.pickerItem}
+                      >
+                        {Array.from({ length: 12 }, (_, i) => i).map((inches) => (
+                          <Picker.Item key={inches} label={inches.toString()} value={inches} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          )}
         </View>
-      )}
-    </View>
-  );
+      </View>
+    );
+  };
 
   const renderWeightStep = () => {
     const handleWeightChange = (text: string) => {
@@ -672,52 +522,110 @@ export default function SurveyScreen() {
     );
   };
 
-  const renderExerciseFrequencyStep = () => (
-    <View style={styles.questionContainer}>
-      <Text style={styles.questionTitle}>{SURVEY_STEPS[4].title}</Text>
-      <Text style={styles.questionSubtitle}>{SURVEY_STEPS[4].subtitle}</Text>
+  const renderExerciseFrequencyStep = () => {
+
+    const handleSliderChange = (value: number) => {
+      const roundedValue = Math.round(value);
+      setWorkoutFrequencyValue(value); // Use exact value for smooth interpolation
       
-      <View style={styles.optionsContainer}>
-                 {[
-           { value: 'never' as const, label: 'Never', description: 'I don\'t exercise' },
-           { value: 'rarely' as const, label: 'Rarely', description: 'Less than once a week' },
-           { value: 'sometimes' as const, label: 'Sometimes', description: '1-2 times per week' },
-           { value: 'often' as const, label: 'Often', description: '3-4 times per week' },
-           { value: 'very-often' as const, label: 'Very Often', description: '5+ times per week' },
-         ].map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.radioOption,
-              surveyData.exerciseFrequency === option.value && styles.radioOptionSelected
-            ]}
-            onPress={() => setSurveyData({ exerciseFrequency: option.value })}
-          >
-            <View style={[
-              styles.radioButton,
-              surveyData.exerciseFrequency === option.value && styles.radioButtonSelected
-            ]}>
-              {surveyData.exerciseFrequency === option.value && <View style={styles.radioButtonInner} />}
+      // Map to old exercise frequency values for backward compatibility
+      const frequencyMap: Record<number, 'never' | 'rarely' | 'sometimes' | 'often' | 'very-often'> = {
+        0: 'never',
+        1: 'rarely',
+        2: 'sometimes',
+        3: 'sometimes',
+        4: 'often',
+        5: 'often',
+        6: 'very-often',
+        7: 'very-often',
+      };
+      
+      setSurveyData({ exerciseFrequency: frequencyMap[roundedValue] || 'sometimes' });
+    };
+
+    const getFrequencyLabel = () => {
+      const value = workoutFrequencyValue;
+      if (value === 0) return '0 days / week';
+      if (value === 1) return '1 day / week';
+      return `${value} days / week`;
+    };
+
+    // Removed unused variable
+
+    return (
+      <View style={styles.questionContainer}>
+        <Text style={styles.questionTitle}>{SURVEY_STEPS[4].title}</Text>
+        <Text style={styles.questionSubtitle}>{SURVEY_STEPS[4].subtitle}</Text>
+        
+        <View style={styles.frequencyContainer}>
+          {/* Pose Image Display */}
+          <View style={styles.poseImageContainer}>
+            {(() => {
+              const roundedValue = Math.round(workoutFrequencyValue);
+              const poseImages: { [key: number]: any } = {
+                0: require('../assets/poses/pose-0.png'),
+                1: require('../assets/poses/pose-1.png'),
+                2: require('../assets/poses/pose-2.png'),
+                3: require('../assets/poses/pose-3.png'),
+                4: require('../assets/poses/pose-4.png'),
+                5: require('../assets/poses/pose-5.png'),
+                6: require('../assets/poses/pose-6.png'),
+                7: require('../assets/poses/pose-7.png'),
+              };
+              
+              try {
+                const imageSource = poseImages[roundedValue] || poseImages[0];
+                return (
+                  <View style={styles.poseImageBox}>
+                    <Image 
+                      source={imageSource}
+                      style={styles.poseImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                );
+              } catch (error) {
+                // Fallback to number if image not found
+                return (
+                  <View style={styles.frequencyNumberContainer}>
+                    <View style={styles.frequencyCircle}>
+                      <Text style={styles.frequencyNumber}>
+                        {roundedValue}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }
+            })()}
+          </View>
+
+          {/* Frequency Label */}
+          <Text style={styles.frequencyLabel}>{getFrequencyLabel()}</Text>
+
+          {/* Slider */}
+          <View style={styles.sliderContainer}>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={7}
+              step={1}
+              value={workoutFrequencyValue}
+              onValueChange={handleSliderChange}
+              minimumTrackTintColor={colors.accent}
+              maximumTrackTintColor={colors.border}
+              thumbTintColor={colors.accent}
+            />
+            
+            {/* Slider Labels */}
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabel}>0</Text>
+              <Text style={styles.sliderLabel}>7</Text>
             </View>
-            <View style={styles.radioOptionContent}>
-              <Text style={[
-                styles.radioOptionText,
-                surveyData.exerciseFrequency === option.value && styles.radioOptionTextSelected
-              ]}>
-                {option.label}
-              </Text>
-              <Text style={[
-                styles.radioOptionDescription,
-                surveyData.exerciseFrequency === option.value && styles.radioOptionDescriptionSelected
-              ]}>
-                {option.description}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+          </View>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderWorkoutGoalStep = () => (
     <View style={styles.questionContainer}>
@@ -730,7 +638,6 @@ export default function SurveyScreen() {
            { value: 'build-muscle' as const, label: 'Build Muscle', description: 'Increase muscle mass and strength' },
            { value: 'maintain' as const, label: 'Maintain', description: 'Keep current fitness level' },
            { value: 'improve-fitness' as const, label: 'Improve Fitness', description: 'Enhance overall physical condition' },
-           { value: 'sports-performance' as const, label: 'Sports Performance', description: 'Improve athletic abilities' },
          ].map((option) => (
           <TouchableOpacity
             key={option.value}
@@ -820,36 +727,23 @@ export default function SurveyScreen() {
         <ProgressBar currentStep={currentStep} totalSteps={SURVEY_STEPS.length} />
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         <Animated.View
           style={[
             styles.stepContainer,
             {
               opacity: fadeAnim,
-              transform: [{ translateX: slideAnim }],
+              transform: [
+                { scale: scaleAnim },
+              ],
             },
           ]}
         >
           {renderCurrentStep()}
         </Animated.View>
-      </ScrollView>
+      </View>
 
       <View style={styles.footer}>
-        {/* Privacy Policy Link */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('PrivacyPolicy')}
-          style={styles.privacyLinkContainer}
-        >
-          <Text style={styles.privacyLinkText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.privacyLink}>Privacy Policy</Text>
-          </Text>
-        </TouchableOpacity>
-
         <View style={[
           styles.navigationButtons,
           currentStep === 1 && styles.navigationButtonsFirstStep
@@ -874,6 +768,17 @@ export default function SurveyScreen() {
             {currentStep === SURVEY_STEPS.length ? 'Complete Survey' : 'Next'}
           </Button>
         </View>
+        
+        {/* Privacy Policy Link - Below buttons */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PrivacyPolicy')}
+          style={styles.privacyLinkContainer}
+        >
+          <Text style={styles.privacyLinkText}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.privacyLink}>Privacy Policy</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -882,7 +787,7 @@ export default function SurveyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E3DAC9',
+    backgroundColor: colors.background,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   header: {
@@ -892,140 +797,208 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  contentContainer: {
-    paddingBottom: 40, // Add some padding at the bottom for the footer
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
   stepContainer: {
-    // This style is now primarily for the animation container
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   questionContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   questionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    marginTop: 0,
   },
   questionSubtitle: {
     fontSize: 16,
-    color: '#000000',
-    opacity: 0.7,
+    color: colors.textSecondary,
     lineHeight: 22,
-    marginBottom: 30,
+    marginBottom: 32,
+    textAlign: 'center',
   },
   optionsContainer: {
-    // This style is for the radio button group
+    marginTop: -60,
+    marginBottom: 24,
+  },
+  sexOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -60,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    gap: 16,
+    flex: 1,
+  },
+  sexOptionBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    height: 180,
+    flex: 1,
+    marginHorizontal: 0,
+  },
+  sexOptionBoxSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + '10',
+  },
+  sexSymbol: {
+    fontSize: 64,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  sexSymbolSelected: {
+    color: colors.accent,
+  },
+  sexLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  sexLabelSelected: {
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    marginBottom: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   radioOptionSelected: {
-    backgroundColor: '#ffffff',
-    borderColor: '#000000',
-    borderWidth: 5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.accent,
+    borderWidth: 2,
   },
   radioButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#000000',
+    borderColor: colors.textTertiary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   radioButtonSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
-    borderWidth: 3,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surface,
   },
   radioOptionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 17,
+    fontWeight: '500',
+    color: colors.textPrimary,
   },
   radioOptionTextSelected: {
-    color: '#000000',
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   radioOptionDescription: {
     fontSize: 14,
-    color: '#000000',
-    opacity: 0.6,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   radioOptionDescriptionSelected: {
-    color: '#000000',
-    opacity: 0.8,
+    color: colors.textPrimary,
   },
   dateDisplayContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginTop: -60,
+    width: '100%',
+    flex: 1,
   },
   dateDisplayText: {
-    fontSize: 24,
+    fontSize: 42,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 10,
+    color: colors.textPrimary,
     textAlign: 'center',
-    flexShrink: 0,
+    paddingVertical: 16,
     paddingHorizontal: 20,
+    letterSpacing: -0.5,
   },
   datePickerButton: {
-    backgroundColor: '#000000',
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   datePickerButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#E3DAC9',
   },
-  datePickerContainer: {
-    backgroundColor: '#ffffff',
+  iosDatePickerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iosDatePickerContainer: {
+    backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
-    minHeight: 400,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 8,
+  },
+  iosDatePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  iosDatePickerCancel: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '500',
+  },
+  iosDatePickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  iosDatePickerDone: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  optionBox: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   datePickerRow: {
     flexDirection: 'row',
@@ -1052,6 +1025,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     minHeight: 200,
+    color: colors.textPrimary,
+  },
+  pickerItem: {
+    color: colors.textPrimary,
   },
   datePickerActions: {
     flexDirection: 'row',
@@ -1060,35 +1037,69 @@ const styles = StyleSheet.create({
   },
   heightDisplayContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginTop: -60,
+    width: '100%',
+    flex: 1,
   },
   heightDisplayText: {
-    fontSize: 24,
+    fontSize: 42,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 10,
-  },
-  heightPickerButton: {
-    backgroundColor: '#000000',
+    color: colors.textPrimary,
+    textAlign: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    letterSpacing: -0.5,
   },
-  heightPickerContainer: {
-    backgroundColor: '#ffffff',
+  iosHeightPickerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iosHeightPickerContainer: {
+    backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 20,
-    marginTop: 20,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 8,
+  },
+  iosHeightPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  iosHeightPickerCancel: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '500',
+  },
+  iosHeightPickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  iosHeightPickerDone: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  heightPickerContainer: {
+    marginTop: 20,
   },
   heightPickerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   heightPickerColumn: {
     flex: 1,
@@ -1098,20 +1109,20 @@ const styles = StyleSheet.create({
   heightPickerLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: colors.textPrimary,
     marginBottom: 10,
-  },
-  heightPickerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
+    textAlign: 'center',
   },
   weightContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -60,
+    width: '100%',
+    flex: 1,
   },
   weightInputSection: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   weightInputRow: {
     flexDirection: 'row',
@@ -1199,7 +1210,7 @@ const styles = StyleSheet.create({
   },
   weightUnitContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
   },
   weightUnitLabel: {
     fontSize: 16,
@@ -1255,25 +1266,22 @@ const styles = StyleSheet.create({
     color: '#E3DAC9',
   },
   footer: {
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     paddingHorizontal: 20,
-    paddingTop: 15,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    paddingTop: 20,
   },
   privacyLinkContainer: {
-    marginBottom: 15,
+    marginTop: 20,
     alignItems: 'center',
   },
   privacyLinkText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   privacyLink: {
-    color: '#007AFF',
-    fontWeight: '600',
+    color: colors.accent,
+    fontWeight: '500',
     textDecorationLine: 'underline',
   },
   navigationButtons: {
@@ -1286,10 +1294,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backButton: {
-    backgroundColor: '#000000',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 16,
@@ -1297,14 +1306,14 @@ const styles = StyleSheet.create({
     color: '#E3DAC9',
   },
   nextButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 18,
+    backgroundColor: colors.accent,
+    paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 16,
+    borderRadius: 8,
     alignItems: 'center',
   },
   nextButtonDisabled: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: colors.interactiveDisabled,
   },
   nextButtonText: {
     fontSize: 18,
@@ -1409,5 +1418,82 @@ const styles = StyleSheet.create({
   },
   yearPickerOption: {
     paddingHorizontal: 40,
+  },
+  frequencyContainer: {
+    alignItems: 'center',
+    marginTop: -20,
+    width: '100%',
+  },
+  poseImageContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    minHeight: 240,
+  },
+  poseImageBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  poseImage: {
+    width: 200,
+    height: 280,
+  },
+  frequencyNumberContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  frequencyCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.accent + '20',
+    borderWidth: 2,
+    borderColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  frequencyNumber: {
+    fontSize: 48,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  frequencyLabel: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  sliderContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 0,
+    marginBottom: 32,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  sliderLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });

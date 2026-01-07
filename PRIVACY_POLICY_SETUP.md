@@ -171,3 +171,4 @@ When submitting to App Store Connect, you'll need:
 
 **Your privacy policy is ready! Just host it online and you're good to go for App Store submission.** 🚀
 
+

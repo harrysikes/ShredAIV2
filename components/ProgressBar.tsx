@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Text } from 'react-native';
+import colors from '../constants/colors';
 
 interface ProgressBarProps {
   currentStep: number;
@@ -83,22 +84,22 @@ const styles = StyleSheet.create({
   },
   segment: {
     width: '80%',
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
     overflow: 'hidden',
     position: 'relative',
   },
   segmentCompleted: {
-    backgroundColor: '#000000',
+    backgroundColor: colors.accent,
   },
   segmentFill: {
     position: 'absolute',
     top: 0,
     left: 0,
     height: '100%',
-    backgroundColor: '#000000',
-    borderRadius: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 3,
   },
 
   stepCounter: {
@@ -106,8 +107,8 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
 });
 

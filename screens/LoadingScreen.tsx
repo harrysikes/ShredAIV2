@@ -10,14 +10,17 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
+import colors from '../constants/colors';
+import { Image } from 'react-native';
 
 type LoadingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Loading'>;
 
 export default function LoadingScreen() {
   const navigation = useNavigation<LoadingScreenNavigationProp>();
-  const { surveyData, capturedImage, setBodyFatPercentage, setIsLoading } = useSurveyStore();
+  const { surveyData, capturedImages, setBodyFatPercentage, setIsLoading } = useSurveyStore();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const textAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
   const [analysisStep, setAnalysisStep] = React.useState(0);
 
   useEffect(() => {
@@ -25,24 +28,33 @@ export default function LoadingScreen() {
     const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
+          toValue: 1.15,
+          duration: 1200,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1200,
           useNativeDriver: true,
         }),
       ])
     );
     pulseAnimation.start();
 
+
     // Start text fade animation
-    Animated.timing(textAnim, {
+    Animated.spring(textAnim, {
       toValue: 1,
-      duration: 800,
+      tension: 40,
+      friction: 7,
       useNativeDriver: true,
+    }).start();
+
+    // Start progress animation
+    Animated.timing(progressAnim, {
+      toValue: 100,
+      duration: 7000,
+      useNativeDriver: false,
     }).start();
 
     // Simulate AI analysis steps WITHOUT actually calling the API
@@ -96,17 +108,30 @@ export default function LoadingScreen() {
   }, []);
 
   const getAnalysisStepText = () => {
+    const angleCount = capturedImages.length;
+    const isMultiAngle = angleCount > 1;
+    
     switch (analysisStep) {
       case 1:
-        return 'Detecting human presence and analyzing pose...';
+        return isMultiAngle 
+          ? `Analyzing ${angleCount} angles and detecting human presence...`
+          : 'Detecting human presence and analyzing pose...';
       case 2:
-        return 'Analyzing muscle visibility and definition...';
+        return isMultiAngle
+          ? 'Analyzing muscle visibility across all angles...'
+          : 'Analyzing muscle visibility and definition...';
       case 3:
-        return 'Calculating body proportions and ratios...';
+        return isMultiAngle
+          ? 'Calculating body proportions from multiple views...'
+          : 'Calculating body proportions and ratios...';
       case 4:
-        return 'Computing final body fat percentage...';
+        return isMultiAngle
+          ? 'Combining multi-angle analysis for final calculation...'
+          : 'Computing final body fat percentage...';
       default:
-        return 'Initializing AI analysis...';
+        return isMultiAngle
+          ? 'Initializing multi-angle AI analysis...'
+          : 'Initializing AI analysis...';
     }
   };
 
@@ -128,21 +153,42 @@ export default function LoadingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {/* Logo or app name */}
-        <Text style={styles.appName}>ShredAI</Text>
+        {/* Logo */}
+        <Image 
+          source={require('../assets/icon.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
         
         {/* Main loading area */}
         <View style={styles.loadingArea}>
-          <Animated.View
-            style={[
-              styles.spinnerContainer,
-              {
-                transform: [{ scale: pulseAnim }],
-              },
-            ]}
-          >
-            <ActivityIndicator size="large" color="#000000" />
-          </Animated.View>
+          <View style={styles.spinnerContainer}>
+            <Animated.View
+              style={[
+                styles.spinnerWrapper,
+                {
+                  transform: [{ scale: pulseAnim }],
+                },
+              ]}
+            >
+              <ActivityIndicator size="large" color={colors.textPrimary} />
+            </Animated.View>
+          </View>
+          
+          {/* Progress bar */}
+          <View style={styles.progressBarContainer}>
+            <Animated.View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
           
           <Animated.Text
             style={[
@@ -178,7 +224,7 @@ export default function LoadingScreen() {
           </Animated.Text>
         </View>
 
-        {/* Progress indicators */}
+        {/* Step Progress indicators */}
         <View style={styles.progressContainer}>
           <View style={[styles.progressStep, analysisStep >= 1 && styles.progressStepCompleted]}>
             <View style={[styles.progressDot, analysisStep >= 1 && styles.progressDotCompleted]} />
@@ -224,6 +270,11 @@ export default function LoadingScreen() {
           <Text style={styles.aiInfoText}>
             • Multi-factor body fat estimation
           </Text>
+          {capturedImages.length > 1 && (
+            <Text style={styles.aiInfoText}>
+              • Multi-angle analysis ({capturedImages.length} views) for enhanced accuracy
+            </Text>
+          )}
         </View>
       </View>
     </View>
@@ -233,7 +284,7 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E3DAC9',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -241,12 +292,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  appName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#000000',
-    marginBottom: 60,
-    letterSpacing: 2,
+  logo: {
+    width: 180,
+    height: 180,
+    marginBottom: 40,
   },
   loadingArea: {
     alignItems: 'center',
@@ -254,27 +303,51 @@ const styles = StyleSheet.create({
   },
   spinnerContainer: {
     marginBottom: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  spinnerWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  progressBarContainer: {
+    width: '80%',
+    height: 3,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+    borderRadius: 2,
   },
   loadingText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   subText: {
     fontSize: 16,
-    color: '#000000',
+    color: colors.textSecondary,
     textAlign: 'center',
-    opacity: 0.7,
     lineHeight: 22,
     marginBottom: 8,
   },
   detailText: {
     fontSize: 14,
-    color: '#000000',
+    color: colors.textTertiary,
     textAlign: 'center',
-    opacity: 0.6,
     lineHeight: 18,
   },
   progressContainer: {
@@ -284,48 +357,52 @@ const styles = StyleSheet.create({
   progressStep: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
+    paddingVertical: 4,
   },
   progressStepCompleted: {
     opacity: 1,
   },
   progressDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    marginRight: 15,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.border,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   progressDotCompleted: {
-    backgroundColor: '#000000',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   progressText: {
-    fontSize: 16,
-    color: '#000000',
-    opacity: 0.6,
+    fontSize: 15,
+    color: colors.textTertiary,
   },
   progressTextCompleted: {
-    opacity: 1,
-    fontWeight: '600',
+    color: colors.textPrimary,
+    fontWeight: '500',
   },
   aiInfoContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: colors.surface,
     paddingHorizontal: 20,
     paddingVertical: 15,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#000000',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   aiInfoTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#000000',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   aiInfoText: {
     fontSize: 14,
-    color: '#000000',
-    opacity: 0.7,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 6,
   },

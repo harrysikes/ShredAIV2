@@ -29,7 +29,7 @@ export default function AppNavigator() {
         initialRouteName="Survey"
         screenOptions={{
           headerShown: false,
-          cardStyleInterpolator: ({ current, layouts }) => {
+          cardStyleInterpolator: ({ current, next, layouts }) => {
             return {
               cardStyle: {
                 transform: [
@@ -39,9 +39,49 @@ export default function AppNavigator() {
                       outputRange: [layouts.screen.width, 0],
                     }),
                   },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.95, 0.97, 1],
+                    }),
+                  },
                 ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 0.5, 0.9, 1],
+                  outputRange: [0, 0.5, 0.9, 1],
+                }),
+              },
+              overlayStyle: {
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.5],
+                }),
               },
             };
+          },
+          transitionSpec: {
+            open: {
+              animation: 'spring',
+              config: {
+                stiffness: 1000,
+                damping: 500,
+                mass: 3,
+                overshootClamping: true,
+                restDisplacementThreshold: 0.01,
+                restSpeedThreshold: 0.01,
+              },
+            },
+            close: {
+              animation: 'spring',
+              config: {
+                stiffness: 1000,
+                damping: 500,
+                mass: 3,
+                overshootClamping: true,
+                restDisplacementThreshold: 0.01,
+                restSpeedThreshold: 0.01,
+              },
+            },
           },
         }}
       >
