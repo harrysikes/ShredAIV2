@@ -94,12 +94,12 @@ export const calculateBodyFat = async (
     const combinedEstimate = (aiAnalysis.bodyFatPercentage * aiWeight) + (surveyEstimate * surveyWeight);
     
     return {
-      bodyFatPercentage: Math.round(combinedEstimate * 10) / 10,
+      bodyFatPercentage: combinedEstimate,
       confidence: aiAnalysis.confidence,
       analysis: {
-        surveyEstimate: Math.round(surveyEstimate * 10) / 10,
-        imageEstimate: Math.round(aiAnalysis.bodyFatPercentage * 10) / 10,
-        combinedEstimate: Math.round(combinedEstimate * 10) / 10,
+        surveyEstimate: surveyEstimate,
+        imageEstimate: aiAnalysis.bodyFatPercentage,
+        combinedEstimate: combinedEstimate,
       },
       muscleVisibility: aiAnalysis.muscleVisibility,
       bodyProportions: aiAnalysis.bodyProportions,
@@ -128,12 +128,12 @@ const calculateBodyFatFallback = async (
   const surveyEstimate = calculateSurveyEstimate(surveyData, age);
   
   return {
-    bodyFatPercentage: Math.round(surveyEstimate * 10) / 10,
+    bodyFatPercentage: surveyEstimate,
     confidence: 0.6, // Lower confidence for fallback
     analysis: {
-      surveyEstimate: Math.round(surveyEstimate * 10) / 10,
+      surveyEstimate: surveyEstimate,
       imageEstimate: surveyEstimate, // Same as survey for fallback
-      combinedEstimate: Math.round(surveyEstimate * 10) / 10,
+      combinedEstimate: surveyEstimate,
     },
     muscleVisibility: {
       shoulders: 50,

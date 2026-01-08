@@ -37,6 +37,30 @@ export const detectHuman = async (
     // Mock detection logic with realistic behavior
     const imageSize = request.imageData.length;
     
+    // Validate image data exists and has minimum size
+    if (!request.imageData || imageSize < 5000) {
+      return {
+        humanDetected: false,
+        confidence: 0,
+        message: 'Invalid or empty image data',
+      };
+    }
+    
+    // Check for blank/black screen by analyzing image characteristics
+    // In a real implementation, this would decode the image and check pixel values
+    // For now, we'll use image size and data patterns as a proxy
+    const base64Length = request.imageData.length;
+    const estimatedImageSize = (base64Length * 3) / 4; // Approximate decoded size
+    
+    // Very small or uniform images are likely blank screens
+    if (base64Length < 20000) { // Less than ~15KB base64 = likely blank/error
+      return {
+        humanDetected: false,
+        confidence: 0.1,
+        message: 'Image appears to be blank or invalid',
+      };
+    }
+    
     // Simulate detection based on image characteristics
     // In reality, this would be AI analysis of the image content
     let humanDetected = false;
@@ -46,8 +70,9 @@ export const detectHuman = async (
     // Simulate different detection scenarios
     const random = Math.random();
     
-    if (random < 0.85) {
-      // 85% chance of detecting a human (realistic success rate)
+    // More realistic detection - require minimum image quality
+    if (base64Length > 50000 && random < 0.75) {
+      // 75% chance of detecting a human (only for decent quality images)
       humanDetected = true;
       confidence = 0.7 + (random * 0.3); // 70-100% confidence
       message = 'Person detected successfully';
@@ -58,27 +83,29 @@ export const detectHuman = async (
         message = 'Person clearly visible in frame';
       }
     } else {
-      // 15% chance of no detection (simulating edge cases)
+      // No detection or low quality
       humanDetected = false;
       confidence = 0.1 + (random * 0.4); // 10-50% confidence
       
       // Simulate different failure reasons
-      if (random < 0.3) {
+      if (base64Length < 30000) {
+        message = 'Image quality too low for detection';
+      } else if (random < 0.4) {
         message = 'No person visible in frame';
-      } else if (random < 0.6) {
+      } else if (random < 0.7) {
         message = 'Person partially visible or too small';
       } else {
         message = 'Image too dark or unclear for detection';
       }
     }
     
-    // Add some randomness to make it feel more realistic
-    if (imageSize < 10000) {
-      // Very small images are less likely to have clear person detection
-      humanDetected = humanDetected && (random > 0.2);
-      if (!humanDetected) {
+    // Additional validation: very small images are unlikely to have clear person detection
+    if (imageSize < 10000 || base64Length < 20000) {
+      humanDetected = false;
+      if (!message) {
         message = 'Image resolution too low for accurate detection';
       }
+      confidence = Math.min(confidence, 0.2);
     }
     
     return {

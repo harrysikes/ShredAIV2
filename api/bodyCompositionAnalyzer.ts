@@ -102,7 +102,7 @@ export const analyzeBodyComposition = async (
     const technicalDetails = analyzeTechnicalFactors(imageData, muscleVisibility);
     
     return {
-      bodyFatPercentage: Math.round(bodyFatPercentage * 10) / 10,
+      bodyFatPercentage: bodyFatPercentage,
       confidence: Math.round(confidence * 100) / 100,
       muscleVisibility,
       bodyProportions,

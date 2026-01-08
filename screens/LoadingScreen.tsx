@@ -5,19 +5,44 @@ import {
   StyleSheet,
   Animated,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore } from '../state/surveyStore';
 import colors from '../constants/colors';
-import { Image } from 'react-native';
 
 type LoadingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Loading'>;
 
 export default function LoadingScreen() {
   const navigation = useNavigation<LoadingScreenNavigationProp>();
   const { surveyData, capturedImages, setBodyFatPercentage, setIsLoading } = useSurveyStore();
+
+  // Validate that we have captured images before proceeding
+  useEffect(() => {
+    if (!capturedImages || capturedImages.length === 0) {
+      console.error('No images captured - cannot proceed with analysis');
+      Alert.alert(
+        'No Images',
+        'No images were captured. Please return to the camera and take photos.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
+
+    // Validate image quality - check that images have minimum size
+    const invalidImages = capturedImages.filter(img => !img.base64 || img.base64.length < 20000);
+    if (invalidImages.length > 0) {
+      console.error('Invalid or blank images detected');
+      Alert.alert(
+        'Invalid Images',
+        'Some images appear to be blank or invalid. Please retake the photos.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
+  }, [capturedImages, navigation]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const textAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -79,7 +104,7 @@ export default function LoadingScreen() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Set a mock body fat percentage (this will be replaced with real analysis after subscription)
-        const mockBodyFatPercentage = Math.floor(Math.random() * 15) + 8; // Random between 8-22%
+        const mockBodyFatPercentage = (Math.random() * 15) + 8; // Random between 8-22% with decimals
         setBodyFatPercentage(mockBodyFatPercentage);
         setIsLoading(false);
         
@@ -153,13 +178,6 @@ export default function LoadingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {/* Logo */}
-        <Image 
-          source={require('../assets/icon.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        
         {/* Main loading area */}
         <View style={styles.loadingArea}>
           <View style={styles.spinnerContainer}>
@@ -291,11 +309,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-  },
-  logo: {
-    width: 180,
-    height: 180,
-    marginBottom: 40,
   },
   loadingArea: {
     alignItems: 'center',

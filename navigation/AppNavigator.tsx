@@ -3,20 +3,28 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 
+import HomeScreen from '../screens/HomeScreen';
 import SurveyScreen from '../screens/SurveyScreen';
+import CameraInstructionsScreen from '../screens/CameraInstructionsScreen';
 import CameraScreen from '../screens/CameraScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import ResultsScreen from '../screens/ResultsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import BodyFatHistoryScreen from '../screens/BodyFatHistoryScreen';
+import WorkoutPlanScreen from '../screens/WorkoutPlanScreen';
 
 export type RootStackParamList = {
+  Home: undefined;
   Survey: undefined;
+  CameraInstructions: undefined;
   Camera: undefined;
   Loading: undefined;
   Paywall: undefined;
   Results: undefined;
   PrivacyPolicy: undefined;
+  BodyFatHistory: undefined;
+  WorkoutPlan: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -26,7 +34,7 @@ export default function AppNavigator() {
     <NavigationContainer>
       <StatusBar style="dark" />
       <Stack.Navigator
-        initialRouteName="Survey"
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
           cardStyleInterpolator: ({ current, next, layouts }) => {
@@ -85,12 +93,16 @@ export default function AppNavigator() {
           },
         }}
       >
+        <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Survey" component={SurveyScreen} />
+        <Stack.Screen name="CameraInstructions" component={CameraInstructionsScreen} />
         <Stack.Screen name="Camera" component={CameraScreen} />
         <Stack.Screen name="Loading" component={LoadingScreen} />
         <Stack.Screen name="Paywall" component={PaywallScreen} />
         <Stack.Screen name="Results" component={ResultsScreen} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+        <Stack.Screen name="BodyFatHistory" component={BodyFatHistoryScreen} />
+        <Stack.Screen name="WorkoutPlan" component={WorkoutPlanScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

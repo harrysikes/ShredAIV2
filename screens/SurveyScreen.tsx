@@ -75,8 +75,8 @@ export default function SurveyScreen() {
   const [showHeightPicker, setShowHeightPicker] = useState(false);
   const [selectedFeet, setSelectedFeet] = useState(surveyData.height?.feet || 5);
   const [selectedInches, setSelectedInches] = useState(surveyData.height?.inches || 0);
-  const [isWeightEditing, setIsWeightEditing] = useState(false);
-  const [weightInputValue, setWeightInputValue] = useState(surveyData.weight?.value?.toString() || '150');
+  const [showWeightPicker, setShowWeightPicker] = useState(false);
+  const [selectedWeight, setSelectedWeight] = useState(surveyData.weight?.value || 150);
   const [workoutFrequencyValue, setWorkoutFrequencyValue] = useState(() => {
     // Map old values to new 0-7 scale
     const mapping: Record<string, number> = {
@@ -125,20 +125,20 @@ export default function SurveyScreen() {
     }
   }, [surveyData.height]);
 
-  // Update weight input value when survey data changes
+  // Update selected weight when survey data changes
   useEffect(() => {
     if (surveyData.weight?.value) {
-      setWeightInputValue(surveyData.weight.value.toString());
+      setSelectedWeight(surveyData.weight.value);
     }
-  }, [surveyData.weight?.value]);
+  }, [surveyData.weight?.value, surveyData.weight?.unit]);
 
 
   const handleNext = () => {
     if (currentStep < SURVEY_STEPS.length) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Survey complete, navigate to camera
-      navigation.navigate('Camera');
+      // Survey complete, navigate to camera instructions
+      navigation.navigate('CameraInstructions');
     }
   };
 
@@ -371,152 +371,128 @@ export default function SurveyScreen() {
   };
 
   const renderWeightStep = () => {
-    const handleWeightChange = (text: string) => {
-      const numValue = parseInt(text) || 0;
-      if (numValue >= 50 && numValue <= 500) {
-        setSurveyData({ 
-          weight: { 
-            value: numValue, 
-            unit: surveyData.weight?.unit || 'lbs' 
-          } 
-        });
-      }
-      setWeightInputValue(text);
-    };
-    
-    const handleDone = () => {
-      const numValue = parseInt(weightInputValue) || 150;
-      const clampedValue = Math.max(50, Math.min(500, numValue));
+    const handleWeightConfirm = () => {
       setSurveyData({ 
         weight: { 
-          value: clampedValue, 
+          value: selectedWeight, 
           unit: surveyData.weight?.unit || 'lbs' 
         } 
       });
-      setWeightInputValue(clampedValue.toString());
-      setIsWeightEditing(false);
+      setShowWeightPicker(false);
     };
-    
+
+    // Generate weight options based on unit
+    const minWeight = surveyData.weight?.unit === 'kg' ? 20 : 50;
+    const maxWeight = surveyData.weight?.unit === 'kg' ? 230 : 500;
+    const weightOptions = Array.from({ length: maxWeight - minWeight + 1 }, (_, i) => minWeight + i);
+
     return (
       <View style={styles.questionContainer}>
         <Text style={styles.questionTitle}>{SURVEY_STEPS[3].title}</Text>
         <Text style={styles.questionSubtitle}>{SURVEY_STEPS[3].subtitle}</Text>
         
-        <View style={styles.weightContainer}>
-          {/* Weight Input Section */}
-          <View style={styles.weightInputSection}>
-            <Text style={styles.weightLabel}>Weight</Text>
-            
-            {isWeightEditing ? (
-              <View style={styles.weightInputRow}>
-                <TextInput
-                  style={styles.weightInput}
-                  value={weightInputValue}
-                  onChangeText={handleWeightChange}
-                  keyboardType="numeric"
-                  placeholder="Enter weight"
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={handleDone}
-                >
-                  <Text style={styles.doneButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.weightDisplayRow}
-                onPress={() => setIsWeightEditing(true)}
-              >
-                <Text style={styles.weightValue}>{surveyData.weight?.value || 150}</Text>
-                <Text style={styles.weightUnit}>{surveyData.weight?.unit || 'lbs'}</Text>
-                <Text style={styles.editHint}>Tap to edit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        <View style={styles.weightDisplayContainer}>
+          <TouchableOpacity onPress={() => setShowWeightPicker(true)} activeOpacity={0.7}>
+            <Text style={styles.weightDisplayText}>
+              {surveyData.weight?.value
+                ? `${surveyData.weight.value}`
+                : 'Tap to select weight'}
+            </Text>
+          </TouchableOpacity>
           
-          {/* Unit Toggle */}
-          <View style={styles.weightUnitContainer}>
-            <Text style={styles.weightUnitLabel}>Unit</Text>
-            <View style={styles.weightUnitToggle}>
-              <TouchableOpacity
-                style={[
-                  styles.unitToggleButton,
-                  surveyData.weight?.unit === 'lbs' && styles.unitToggleButtonActive
-                ]}
-                onPress={() => setSurveyData({ 
+          {/* Unit Selection Below Weight */}
+          <View style={styles.weightUnitSelectionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.weightUnitButton,
+                surveyData.weight?.unit === 'lbs' && styles.weightUnitButtonActive
+              ]}
+              onPress={() => {
+                const currentValue = surveyData.weight?.value || 150;
+                // Convert between units when switching
+                const newValue = surveyData.weight?.unit === 'kg' 
+                  ? Math.round(currentValue * 2.20462) 
+                  : currentValue;
+                setSurveyData({ 
                   weight: { 
-                    value: surveyData.weight?.value || 150, 
+                    value: newValue, 
                     unit: 'lbs' 
                   } 
-                })}
-              >
-                <Text style={[
-                  styles.unitToggleText,
-                  surveyData.weight?.unit === 'lbs' && styles.unitToggleTextActive
-                ]}>
-                  lbs
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.unitToggleButton,
-                  surveyData.weight?.unit === 'kg' && styles.unitToggleButtonActive
-                ]}
-                onPress={() => setSurveyData({ 
-                  weight: { 
-                    value: surveyData.weight?.value || 68, 
-                    unit: 'kg' 
-                  } 
-                })}
-              >
-                <Text style={[
-                  styles.unitToggleText,
-                  surveyData.weight?.unit === 'kg' && styles.unitToggleTextActive
-                ]}>
-                  kg
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          {/* Quick Adjust Buttons */}
-          <View style={styles.weightAdjustment}>
-            <TouchableOpacity
-              style={styles.weightAdjustButton}
-              onPress={() => {
-                const currentWeight = surveyData.weight?.value || 150;
-                const newWeight = Math.max(50, currentWeight - 5);
-                setSurveyData({ 
-                  weight: { 
-                    value: newWeight, 
-                    unit: surveyData.weight?.unit || 'lbs' 
-                  } 
                 });
-                setWeightInputValue(newWeight.toString());
+                setSelectedWeight(newValue);
               }}
             >
-              <Text style={styles.weightAdjustButtonText}>-5</Text>
+              <Text style={[
+                styles.weightUnitButtonText,
+                surveyData.weight?.unit === 'lbs' && styles.weightUnitButtonTextActive
+              ]}>
+                lbs
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={styles.weightAdjustButton}
+              style={[
+                styles.weightUnitButton,
+                surveyData.weight?.unit === 'kg' && styles.weightUnitButtonActive
+              ]}
               onPress={() => {
-                const currentWeight = surveyData.weight?.value || 150;
-                const newWeight = Math.min(500, currentWeight + 5);
+                const currentValue = surveyData.weight?.value || 150;
+                // Convert between units when switching
+                const newValue = surveyData.weight?.unit === 'lbs' 
+                  ? Math.round(currentValue / 2.20462) 
+                  : currentValue;
                 setSurveyData({ 
                   weight: { 
-                    value: newWeight, 
-                    unit: surveyData.weight?.unit || 'lbs' 
+                    value: newValue, 
+                    unit: 'kg' 
                   } 
                 });
-                setWeightInputValue(newWeight.toString());
+                setSelectedWeight(newValue);
               }}
             >
-              <Text style={styles.weightAdjustButtonText}>+5</Text>
+              <Text style={[
+                styles.weightUnitButtonText,
+                surveyData.weight?.unit === 'kg' && styles.weightUnitButtonTextActive
+              ]}>
+                kg
+              </Text>
             </TouchableOpacity>
           </View>
+          
+          {showWeightPicker && (
+            <Modal
+              visible={showWeightPicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowWeightPicker(false)}
+            >
+              <View style={styles.iosWeightPickerModal}>
+                <View style={styles.iosWeightPickerContainer}>
+                  <View style={styles.iosWeightPickerHeader}>
+                    <TouchableOpacity onPress={() => setShowWeightPicker(false)}>
+                      <Text style={styles.iosWeightPickerCancel}>Cancel</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.iosWeightPickerTitle}>Select Weight</Text>
+                    <TouchableOpacity onPress={handleWeightConfirm}>
+                      <Text style={styles.iosWeightPickerDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Picker
+                    selectedValue={selectedWeight || minWeight}
+                    onValueChange={(itemValue: number) => setSelectedWeight(itemValue)}
+                    style={styles.weightPicker}
+                    mode="dialog"
+                    enabled={true}
+                    itemStyle={styles.pickerItem}
+                  >
+                    {weightOptions.map((weight) => (
+                      <Picker.Item key={weight} label={weight.toString()} value={weight} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </Modal>
+          )}
         </View>
       </View>
     );
@@ -722,6 +698,7 @@ export default function SurveyScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <View style={styles.header}>
         <ProgressBar currentStep={currentStep} totalSteps={SURVEY_STEPS.length} />
@@ -748,8 +725,16 @@ export default function SurveyScreen() {
           styles.navigationButtons,
           currentStep === 1 && styles.navigationButtonsFirstStep
         ]}>
-          {/* Back Button - Only show for questions 2-6 */}
-          {currentStep > 1 && (
+          {/* Back Button - Show for all steps */}
+          {currentStep === 1 ? (
+            <Button
+              variant="outline"
+              onPress={() => navigation.navigate('Home')}
+              style={styles.backButton}
+            >
+              Back
+            </Button>
+          ) : (
             <Button
               variant="outline"
               onPress={handleBack}
@@ -799,14 +784,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'flex-start',
     paddingTop: 20,
+    flexShrink: 1,
   },
   stepContainer: {
     flex: 1,
     justifyContent: 'flex-start',
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
   questionContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   questionTitle: {
     fontSize: 28,
@@ -825,7 +815,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsContainer: {
-    marginTop: -60,
+    marginTop: -20,
     marginBottom: 24,
   },
   sexOptionsContainer: {
@@ -848,8 +838,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     height: 180,
-    flex: 1,
-    marginHorizontal: 0,
+    width: (screenWidth - 32 - 16) / 2,
   },
   sexOptionBoxSelected: {
     borderColor: colors.accent,
@@ -1093,6 +1082,52 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: '600',
   },
+  iosWeightPickerModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iosWeightPickerContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    paddingBottom: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  iosWeightPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  iosWeightPickerCancel: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '500',
+  },
+  iosWeightPickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  iosWeightPickerDone: {
+    fontSize: 17,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  weightPicker: {
+    width: '100%',
+    height: 200,
+  },
   heightPickerContainer: {
     marginTop: 20,
   },
@@ -1113,12 +1148,21 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
-  weightContainer: {
+  weightDisplayContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -60,
     width: '100%',
     flex: 1,
+  },
+  weightDisplayText: {
+    fontSize: 42,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    letterSpacing: -0.5,
   },
   weightInputSection: {
     alignItems: 'center',
@@ -1208,15 +1252,36 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  weightUnitContainer: {
+  weightUnitSelectionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginTop: 24,
+    paddingHorizontal: 16,
+    gap: 16,
   },
-  weightUnitLabel: {
+  weightUnitButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.softGray,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weightUnitButtonActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
+  },
+  weightUnitButtonText: {
     fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  weightUnitButtonTextActive: {
+    color: colors.surface,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 10,
   },
   weightUnitButtons: {
     flexDirection: 'row',
@@ -1269,6 +1334,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     paddingHorizontal: 20,
     paddingTop: 20,
+    flexShrink: 0,
   },
   privacyLinkContainer: {
     marginTop: 20,
@@ -1291,7 +1357,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   navigationButtonsFirstStep: {
-    justifyContent: 'flex-end',
+    // Keep both buttons visible on first step
   },
   backButton: {
     backgroundColor: colors.accent,

@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useSurveyStore, CameraAngle } from '../state/surveyStore';
@@ -102,6 +102,14 @@ export default function CameraScreen() {
       takePicture();
     }
   }, [countdown, isCountingDown]);
+
+  // Reset to first angle when screen is focused (new scan)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Always start from front angle when camera screen is focused
+      setCurrentAngle('front');
+    }, [setCurrentAngle])
+  );
 
   // Start quality monitoring when camera is ready
   useEffect(() => {
@@ -404,16 +412,6 @@ export default function CameraScreen() {
       
       {/* Overlay on top of camera */}
       <View style={styles.overlay}>
-        {/* Visual guide overlay */}
-        <View style={styles.guideOverlay}>
-          <View style={styles.guideFrame}>
-            <View style={styles.guideCorner} />
-            <View style={[styles.guideCorner, styles.guideCornerTopRight]} />
-            <View style={[styles.guideCorner, styles.guideCornerBottomLeft]} />
-            <View style={[styles.guideCorner, styles.guideCornerBottomRight]} />
-          </View>
-        </View>
-
         {/* Top controls */}
         <View style={styles.topControls}>
           <Button
@@ -460,96 +458,67 @@ export default function CameraScreen() {
           <Text style={styles.angleSubtitle}>{getAngleInstructions()}</Text>
         </View>
 
-        {/* Compact Quality Indicator */}
-        <TouchableOpacity
-          style={[
-            styles.qualityIndicator,
-            setupQuality.overall >= 70 && styles.qualityIndicatorGood,
-            setupQuality.overall < 50 && styles.qualityIndicatorPoor
-          ]}
-          onPress={() => {
-            setShowQualityDetails(!showQualityDetails);
-            Animated.timing(qualityDetailsAnim, {
-              toValue: showQualityDetails ? 0 : 1,
-              duration: 300,
-              useNativeDriver: false,
-            }).start();
-          }}
-          activeOpacity={0.8}
-        >
-          <View style={styles.qualityIndicatorRow}>
-            <Text style={styles.qualityIndicatorLabel}>
-              {setupQuality.overall >= 70 ? '✓ Ready' : setupQuality.overall >= 50 ? '⚠ Needs Improvement' : '✗ Poor Setup'}
-            </Text>
-            <Text style={styles.qualityIndicatorPercent}>{setupQuality.overall}%</Text>
-          </View>
-          <View style={styles.qualityProgressBar}>
-            <View
-              style={[
-                styles.qualityProgressFill,
-                {
-                  width: `${setupQuality.overall}%`,
-                  backgroundColor: getQualityColor(setupQuality.overall >= 70 ? 'optimal' : setupQuality.overall >= 50 ? 'good' : 'poor')
-                }
-              ]}
-            />
-          </View>
-        </TouchableOpacity>
-
-        {/* Expandable Quality Details */}
-        {showQualityDetails && (
-          <Animated.View
-            style={[
-              styles.qualityDetailsContainer,
-              {
-                opacity: qualityDetailsAnim,
-                transform: [
-                  {
-                    translateY: qualityDetailsAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-20, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <View style={styles.qualityGrid}>
-              <View style={styles.qualityItem}>
-                <Text style={styles.qualityLabel}>Lighting</Text>
-                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.lighting) }]}>
+        {/* Live Quality Score with Individual Metrics */}
+        {!isCountingDown && humanDetected === null && !isAnalyzing && (
+          <View style={styles.qualityScoreContainer}>
+            <Text style={styles.qualityScoreLabel}>Setup Quality</Text>
+            <View style={styles.qualityScoreRow}>
+              <Text style={styles.qualityScoreValue}>{setupQuality.overall}%</Text>
+            </View>
+            <View style={styles.qualityMetricsGrid}>
+              <View style={styles.qualityMetricItem}>
+                <Text style={styles.qualityMetricLabel}>Lighting</Text>
+                <Text style={[
+                  styles.qualityMetricIcon,
+                  { color: getQualityColor(setupQuality.lighting) }
+                ]}>
                   {getQualityIcon(setupQuality.lighting)}
                 </Text>
               </View>
-              <View style={styles.qualityItem}>
-                <Text style={styles.qualityLabel}>Angle</Text>
-                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.angle) }]}>
+              <View style={styles.qualityMetricItem}>
+                <Text style={styles.qualityMetricLabel}>Angle</Text>
+                <Text style={[
+                  styles.qualityMetricIcon,
+                  { color: getQualityColor(setupQuality.angle) }
+                ]}>
                   {getQualityIcon(setupQuality.angle)}
                 </Text>
               </View>
-              <View style={styles.qualityItem}>
-                <Text style={styles.qualityLabel}>Distance</Text>
-                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.distance) }]}>
+              <View style={styles.qualityMetricItem}>
+                <Text style={styles.qualityMetricLabel}>Distance</Text>
+                <Text style={[
+                  styles.qualityMetricIcon,
+                  { color: getQualityColor(setupQuality.distance) }
+                ]}>
                   {getQualityIcon(setupQuality.distance)}
                 </Text>
               </View>
-              <View style={styles.qualityItem}>
-                <Text style={styles.qualityLabel}>Pose</Text>
-                <Text style={[styles.qualityScore, { color: getQualityColor(setupQuality.pose) }]}>
+              <View style={styles.qualityMetricItem}>
+                <Text style={styles.qualityMetricLabel}>Pose</Text>
+                <Text style={[
+                  styles.qualityMetricIcon,
+                  { color: getQualityColor(setupQuality.pose) }
+                ]}>
                   {getQualityIcon(setupQuality.pose)}
                 </Text>
               </View>
             </View>
-            {getSetupFeedback().length > 0 && (
-              <View style={styles.feedbackList}>
-                {getSetupFeedback().map((feedback, index) => (
-                  <Text key={index} style={styles.feedbackText}>
-                    • {feedback}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </Animated.View>
+            <View style={styles.qualityScoreBar}>
+              <View
+                style={[
+                  styles.qualityScoreFill,
+                  {
+                    width: `${setupQuality.overall}%`,
+                    backgroundColor: setupQuality.overall >= 70 
+                      ? colors.success 
+                      : setupQuality.overall >= 50 
+                      ? colors.warning 
+                      : colors.error
+                  }
+                ]}
+              />
+            </View>
+          </View>
         )}
 
         {/* Center countdown */}
@@ -599,40 +568,8 @@ export default function CameraScreen() {
               ? `Photo will be taken in ${countdown} seconds`
               : humanDetected === false
               ? 'Position yourself clearly in the frame'
-              : getAngleInstructions()}
+              : 'Position yourself in the frame and tap to capture'}
           </Text>
-          
-          {/* Collapsible Positioning tips */}
-          {!isCountingDown && humanDetected === null && (
-            <TouchableOpacity
-              style={styles.tipsToggle}
-              onPress={() => setShowSetupGuide(!showSetupGuide)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tipsToggleText}>
-                {showSetupGuide ? '▼ Hide Tips' : '▶ Setup Tips'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          
-          {showSetupGuide && !isCountingDown && humanDetected === null && (
-            <Animated.View
-              style={[
-                styles.tipsContainer,
-                {
-                  opacity: tipsAnim,
-                }
-              ]}
-            >
-              <Text style={styles.tipsTitle}>📸 Optimal Setup Guide:</Text>
-              <Text style={styles.tipText}>• Stand 3-6 feet from camera</Text>
-              <Text style={styles.tipText}>• Face camera directly, avoid side angles</Text>
-              <Text style={styles.tipText}>• Ensure even, bright lighting from front</Text>
-              <Text style={styles.tipText}>• Show upper body clearly, arms slightly away</Text>
-              <Text style={styles.tipText}>• Remove loose clothing for accurate analysis</Text>
-              <Text style={styles.tipText}>• Avoid shadows and harsh backlighting</Text>
-            </Animated.View>
-          )}
         </View>
 
         {/* Bottom shutter button */}
@@ -670,45 +607,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
-  },
-  guideOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-    pointerEvents: 'none',
-  },
-  guideFrame: {
-    width: '80%',
-    height: '80%',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 10,
-    position: 'relative',
-    pointerEvents: 'none',
-  },
-  guideCorner: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 10,
-  },
-  guideCornerTopRight: {
-    top: 0,
-    right: 0,
-  },
-  guideCornerBottomLeft: {
-    bottom: 0,
-    left: 0,
-  },
-  guideCornerBottomRight: {
-    bottom: 0,
-    right: 0,
   },
   topControls: {
     flexDirection: 'row',
@@ -1022,12 +920,73 @@ const styles = StyleSheet.create({
   },
   angleTitleContainer: {
     position: 'absolute',
-    top: 120,
+    top: 100,
     left: 0,
     right: 0,
     alignItems: 'center',
     paddingHorizontal: 20,
     zIndex: 3,
+  },
+  qualityScoreContainer: {
+    position: 'absolute',
+    top: 180,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.overlay,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    zIndex: 3,
+  },
+  qualityScoreLabel: {
+    color: colors.surface,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    opacity: 0.9,
+  },
+  qualityScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  qualityScoreValue: {
+    color: colors.surface,
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  qualityMetricsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  qualityMetricItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  qualityMetricLabel: {
+    color: colors.surface,
+    fontSize: 11,
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  qualityMetricIcon: {
+    fontSize: 24,
+  },
+  qualityScoreBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  qualityScoreFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   angleTitle: {
     color: colors.surface,
