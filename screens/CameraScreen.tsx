@@ -843,7 +843,6 @@ const styles = StyleSheet.create({
   qualityProgressFill: {
     height: '100%',
     borderRadius: 3,
-    transition: 'width 0.3s ease',
   },
   qualityDetailsContainer: {
     position: 'absolute',

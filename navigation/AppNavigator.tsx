@@ -13,6 +13,7 @@ import ResultsScreen from '../screens/ResultsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import BodyFatHistoryScreen from '../screens/BodyFatHistoryScreen';
 import WorkoutPlanScreen from '../screens/WorkoutPlanScreen';
+import WeeklyChallengeScreen from '../screens/WeeklyChallengeScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -25,6 +26,7 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   BodyFatHistory: undefined;
   WorkoutPlan: undefined;
+  WeeklyChallenge: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -103,6 +105,7 @@ export default function AppNavigator() {
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         <Stack.Screen name="BodyFatHistory" component={BodyFatHistoryScreen} />
         <Stack.Screen name="WorkoutPlan" component={WorkoutPlanScreen} />
+        <Stack.Screen name="WeeklyChallenge" component={WeeklyChallengeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

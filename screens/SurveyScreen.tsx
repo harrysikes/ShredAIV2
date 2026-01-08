@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: colors.softGray,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1288,29 +1288,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: 12,
     padding: 4,
-  },
-  weightUnitButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  weightUnitButtonSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
-    borderWidth: 3,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  weightUnitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  weightUnitButtonTextSelected: {
-    color: '#ffffff',
   },
   weightAdjustment: {
     flexDirection: 'row',

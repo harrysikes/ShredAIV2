@@ -433,7 +433,6 @@ const styles = StyleSheet.create({
   resultBarFill: {
     height: '100%',
     borderRadius: 4,
-    transition: 'width 0.5s ease',
   },
   categoryBadge: {
     paddingHorizontal: 12,

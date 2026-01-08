@@ -30,6 +30,12 @@ export interface BodyFatHistoryEntry {
   weight?: number;
 }
 
+export interface WorkoutTracking {
+  dayOne: string | null; // ISO date string of first BF% log
+  completedWorkouts: Record<string, boolean>; // date -> true
+  missedWorkouts: Record<string, boolean>; // date -> true
+}
+
 export interface AppState {
   surveyData: SurveyData;
   currentStep: number;
@@ -39,6 +45,7 @@ export interface AppState {
   bodyFatPercentage: number | null;
   bodyFatHistory: BodyFatHistoryEntry[];
   workoutPlan: any | null;
+  workoutTracking: WorkoutTracking;
   isLoading: boolean;
   isSubscribed: boolean;
   setSurveyData: (data: Partial<SurveyData>) => void;
@@ -51,11 +58,14 @@ export interface AppState {
   addBodyFatHistory: (bodyFatPercentage: number, weight?: number) => void;
   removeBodyFatHistory: (date: string) => void;
   setWorkoutPlan: (plan: any | null) => void;
+  completeWorkout: (date: string) => Promise<void>;
+  markWorkoutMissed: (date: string) => Promise<void>;
   setIsLoading: (loading: boolean) => void;
   setIsSubscribed: (subscribed: boolean) => void;
   resetSurvey: () => void;
   loadProfileData: () => Promise<void>;
   saveProfileData: () => Promise<void>;
+  getDailyStreak: () => number;
 }
 
 const initialSurveyData: SurveyData = {
@@ -71,6 +81,7 @@ const STORAGE_KEYS = {
   PROFILE: '@shredai_profile',
   HISTORY: '@shredai_history',
   WORKOUT_PLAN: '@shredai_workout_plan',
+  WORKOUT_TRACKING: '@shredai_workout_tracking',
 };
 
 export const useSurveyStore = create<AppState>((set, get) => ({
@@ -82,6 +93,11 @@ export const useSurveyStore = create<AppState>((set, get) => ({
   bodyFatPercentage: null,
   bodyFatHistory: [],
   workoutPlan: null,
+  workoutTracking: {
+    dayOne: null,
+    completedWorkouts: {},
+    missedWorkouts: {},
+  },
   isLoading: false,
   isSubscribed: false,
   
@@ -124,7 +140,8 @@ export const useSurveyStore = create<AppState>((set, get) => ({
       weight,
     };
     
-    let updatedHistory: BodyFatHistoryEntry[];
+    let updatedHistory: BodyFatHistoryEntry[] = [];
+    let dayOne: string | null = null;
     
     set((state) => {
       // Always add new entry (allow multiple scans per day)
@@ -133,12 +150,32 @@ export const useSurveyStore = create<AppState>((set, get) => ({
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
       
-      return { bodyFatHistory: updatedHistory };
+      // Set dayOne if this is the first entry
+      if (state.workoutTracking.dayOne === null && updatedHistory.length > 0) {
+        dayOne = updatedHistory[0].date.split('T')[0]; // Store just the date part
+      } else {
+        dayOne = state.workoutTracking.dayOne;
+      }
+      
+      return { 
+        bodyFatHistory: updatedHistory,
+        workoutTracking: {
+          ...state.workoutTracking,
+          dayOne: dayOne || state.workoutTracking.dayOne,
+        },
+      };
     });
     
     // Save to AsyncStorage using the updated history we just computed
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(updatedHistory));
+      if (dayOne) {
+        const { workoutTracking } = get();
+        await AsyncStorage.setItem(STORAGE_KEYS.WORKOUT_TRACKING, JSON.stringify({
+          ...workoutTracking,
+          dayOne,
+        }));
+      }
       console.log('History saved successfully:', updatedHistory.length, 'entries');
     } catch (error) {
       console.error('Error saving history:', error);
@@ -172,6 +209,54 @@ export const useSurveyStore = create<AppState>((set, get) => ({
     }
   },
   
+  completeWorkout: async (date) => {
+    set((state) => {
+      const completed = { ...state.workoutTracking.completedWorkouts, [date]: true };
+      const missed = { ...state.workoutTracking.missedWorkouts };
+      delete missed[date]; // Remove from missed if it was there
+      
+      return {
+        workoutTracking: {
+          ...state.workoutTracking,
+          completedWorkouts: completed,
+          missedWorkouts: missed,
+        },
+      };
+    });
+    
+    // Save to AsyncStorage
+    const { workoutTracking } = get();
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.WORKOUT_TRACKING, JSON.stringify(workoutTracking));
+    } catch (error) {
+      console.error('Error saving workout completion:', error);
+    }
+  },
+  
+  markWorkoutMissed: async (date) => {
+    set((state) => {
+      const missed = { ...state.workoutTracking.missedWorkouts, [date]: true };
+      const completed = { ...state.workoutTracking.completedWorkouts };
+      delete completed[date]; // Remove from completed if it was there
+      
+      return {
+        workoutTracking: {
+          ...state.workoutTracking,
+          missedWorkouts: missed,
+          completedWorkouts: completed,
+        },
+      };
+    });
+    
+    // Save to AsyncStorage
+    const { workoutTracking } = get();
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.WORKOUT_TRACKING, JSON.stringify(workoutTracking));
+    } catch (error) {
+      console.error('Error saving missed workout:', error);
+    }
+  },
+  
   setIsLoading: (loading) =>
     set({ isLoading: loading }),
     
@@ -196,6 +281,35 @@ export const useSurveyStore = create<AppState>((set, get) => ({
       if (historyJson) {
         const history = JSON.parse(historyJson);
         set({ bodyFatHistory: history });
+        
+        // Set dayOne from first history entry if not already set
+        if (history.length > 0) {
+          const sorted = [...history].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+          const firstDate = sorted[0].date.split('T')[0];
+          
+          const trackingJson = await AsyncStorage.getItem(STORAGE_KEYS.WORKOUT_TRACKING);
+          let tracking = { dayOne: null, completedWorkouts: {}, missedWorkouts: {} };
+          
+          if (trackingJson) {
+            tracking = JSON.parse(trackingJson);
+          }
+          
+          if (!tracking.dayOne) {
+            tracking.dayOne = firstDate;
+            await AsyncStorage.setItem(STORAGE_KEYS.WORKOUT_TRACKING, JSON.stringify(tracking));
+          }
+          
+          set({ workoutTracking: tracking });
+        }
+      }
+      
+      // Load workout tracking
+      const trackingJson = await AsyncStorage.getItem(STORAGE_KEYS.WORKOUT_TRACKING);
+      if (trackingJson) {
+        const tracking = JSON.parse(trackingJson);
+        set({ workoutTracking: tracking });
       }
       
       // Load workout plan
@@ -237,5 +351,64 @@ export const useSurveyStore = create<AppState>((set, get) => ({
     } catch (error) {
       console.error('Error saving profile data:', error);
     }
+  },
+  
+  getDailyStreak: () => {
+    const { bodyFatHistory } = get();
+    if (bodyFatHistory.length === 0) return 0;
+    
+    // Get unique dates (one entry per day counts)
+    const uniqueDates = new Set<string>();
+    bodyFatHistory.forEach(entry => {
+      const date = new Date(entry.date);
+      const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      uniqueDates.add(dateKey);
+    });
+    
+    // Sort dates in descending order
+    const sortedDates = Array.from(uniqueDates)
+      .map(dateKey => {
+        const [year, month, day] = dateKey.split('-').map(Number);
+        return new Date(year, month, day);
+      })
+      .sort((a, b) => b.getTime() - a.getTime());
+    
+    if (sortedDates.length === 0) return 0;
+    
+    // Check if today or yesterday has an entry
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const mostRecentDate = sortedDates[0];
+    mostRecentDate.setHours(0, 0, 0, 0);
+    
+    // If most recent entry is not today or yesterday, streak is broken
+    if (mostRecentDate.getTime() < yesterday.getTime()) {
+      return 0;
+    }
+    
+    // Calculate consecutive days
+    let streak = 1;
+    let currentDate = new Date(mostRecentDate);
+    
+    for (let i = 1; i < sortedDates.length; i++) {
+      const expectedDate = new Date(currentDate);
+      expectedDate.setDate(expectedDate.getDate() - 1);
+      expectedDate.setHours(0, 0, 0, 0);
+      
+      const checkDate = new Date(sortedDates[i]);
+      checkDate.setHours(0, 0, 0, 0);
+      
+      if (checkDate.getTime() === expectedDate.getTime()) {
+        streak++;
+        currentDate = new Date(checkDate);
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
   },
 }));
