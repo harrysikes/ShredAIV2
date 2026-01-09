@@ -37,6 +37,10 @@
     ],
     "experiments": {
       "tsconfigPaths": true
+    },
+    "extra": {
+      "supabaseUrl": "https://gufbulaxyqcggaeqqvhh.supabase.co",
+      "supabaseAnonKey": "sb_publishable_uqD0kRP_huqdK204EveHyw_64Y9j7KS"
     }
   }
 }

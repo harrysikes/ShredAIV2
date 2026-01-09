@@ -13,7 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Swipeable, ScrollView } from 'react-native-gesture-handler';
 import Svg, { Polyline, Circle, Line, G, Text as SvgText } from 'react-native-svg';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import { Button } from '../components/ui';
 import colors from '../constants/colors';
 

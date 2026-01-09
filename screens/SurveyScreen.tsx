@@ -20,7 +20,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import ProgressBar from '../components/ProgressBar';
 import { Button, Card, CardContent } from '../components/ui';
 import colors from '../constants/colors';

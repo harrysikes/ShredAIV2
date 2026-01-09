@@ -1,8 +1,7 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-
 import HomeScreen from '../screens/HomeScreen';
 import SurveyScreen from '../screens/SurveyScreen';
 import CameraInstructionsScreen from '../screens/CameraInstructionsScreen';
@@ -14,8 +13,11 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import BodyFatHistoryScreen from '../screens/BodyFatHistoryScreen';
 import WorkoutPlanScreen from '../screens/WorkoutPlanScreen';
 import WeeklyChallengeScreen from '../screens/WeeklyChallengeScreen';
+import AuthScreen from '../screens/AuthScreen';
+import { useSurveyStore } from '../state/supabaseStore';
 
 export type RootStackParamList = {
+  Auth: undefined;
   Home: undefined;
   Survey: undefined;
   CameraInstructions: undefined;
@@ -32,11 +34,40 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+  const { isAuthenticated } = useSurveyStore();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+
+  // Handle auth state changes and navigate accordingly
+  useEffect(() => {
+    if (!navigationRef.isReady()) return;
+
+    const currentRoute = navigationRef.getCurrentRoute();
+    // Screens that require authentication (excluding scan flow screens)
+    const protectedRoutes = ['Home', 'Survey', 'CameraInstructions', 'Camera', 'BodyFatHistory', 'WorkoutPlan', 'WeeklyChallenge'];
+    // Scan flow screens that can be accessed without auth (but will need auth to save data)
+    const scanFlowScreens = ['Loading', 'Results', 'Paywall'];
+    const isOnProtectedRoute = currentRoute && protectedRoutes.includes(currentRoute.name);
+    const isOnScanFlowScreen = currentRoute && scanFlowScreens.includes(currentRoute.name);
+
+    if (!isAuthenticated) {
+      // Only redirect to Auth if we're on a protected route (not already on Auth or scan flow screens)
+      // Allow scan flow to continue even without auth (data just won't be saved)
+      if (currentRoute?.name !== 'Auth' && isOnProtectedRoute && !isOnScanFlowScreen) {
+        navigationRef.navigate('Auth');
+      }
+    } else {
+      // If authenticated and currently on Auth screen, navigate to Home
+      if (currentRoute?.name === 'Auth') {
+        navigationRef.navigate('Home');
+      }
+    }
+  }, [isAuthenticated, navigationRef]);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <StatusBar style="dark" />
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName={isAuthenticated ? "Home" : "Auth"}
         screenOptions={{
           headerShown: false,
           cardStyleInterpolator: ({ current, next, layouts }) => {
@@ -95,6 +126,11 @@ export default function AppNavigator() {
           },
         }}
       >
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthScreen}
+          options={{ gestureEnabled: false }}
+        />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Survey" component={SurveyScreen} />
         <Stack.Screen name="CameraInstructions" component={CameraInstructionsScreen} />

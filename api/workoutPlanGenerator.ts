@@ -1,4 +1,4 @@
-import { SurveyData } from '../state/surveyStore';
+import { SurveyData } from '../state/supabaseStore';
 
 export interface Exercise {
   name: string;

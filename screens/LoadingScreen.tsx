@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import colors from '../constants/colors';
 
 type LoadingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Loading'>;
@@ -82,30 +82,55 @@ export default function LoadingScreen() {
       useNativeDriver: false,
     }).start();
 
-    // Simulate AI analysis steps WITHOUT actually calling the API
-    const performFalseAnalysis = async () => {
+    // Real AI analysis using OpenAI GPT-4o Vision API
+    const performRealAnalysis = async () => {
       try {
         setIsLoading(true);
         
-        // Step 1: Human detection (1.5 seconds)
+        // Step 1: Human detection (update UI)
         setAnalysisStep(1);
-        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Step 2: Muscle visibility analysis (2 seconds)
+        // Import the API function dynamically
+        const { analyzeBodyComposition } = await import('../api/bodyAnalysisApi');
+        
+        // Prepare images (convert to array of base64 strings)
+        const imageBase64Array = capturedImages.map(img => img.base64);
+        
+        if (imageBase64Array.length === 0) {
+          throw new Error('No images to analyze');
+        }
+        
+        // Step 2: Muscle visibility analysis (update UI)
         setAnalysisStep(2);
-        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Step 3: Body proportion calculations (2 seconds)
+        // Call real OpenAI API
+        const result = await analyzeBodyComposition({
+          images: imageBase64Array,
+          surveyData: surveyData,
+        });
+        
+        if (!result.success || !result.data) {
+          throw new Error(result.error || 'Analysis failed');
+        }
+        
+        // Step 3: Body proportion calculations (update UI)
         setAnalysisStep(3);
-        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Step 4: Final body fat calculation (1.5 seconds)
+        // Extract body fat percentage from result
+        const bodyFatPercentage = result.data.bodyFatPercentage;
+        
+        if (!bodyFatPercentage || bodyFatPercentage <= 0) {
+          throw new Error('Invalid analysis result');
+        }
+        
+        // Step 4: Final body fat calculation (update UI)
         setAnalysisStep(4);
-        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Set a mock body fat percentage (this will be replaced with real analysis after subscription)
-        const mockBodyFatPercentage = (Math.random() * 15) + 8; // Random between 8-22% with decimals
-        setBodyFatPercentage(mockBodyFatPercentage);
+        // Small delay to show final step
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Set the real body fat percentage from OpenAI analysis
+        setBodyFatPercentage(bodyFatPercentage);
         setIsLoading(false);
         
         // Navigate to paywall after a short delay
@@ -113,24 +138,56 @@ export default function LoadingScreen() {
           navigation.navigate('Paywall');
         }, 500);
         
-      } catch (error) {
-        console.error('Error during false analysis:', error);
+      } catch (error: any) {
+        console.error('Error during AI analysis:', error);
         setIsLoading(false);
-        // Still navigate to paywall even if there's an error
-        setTimeout(() => {
-          navigation.navigate('Paywall');
-        }, 500);
+        
+        // Show error alert
+        Alert.alert(
+          'Analysis Error',
+          error.message || 'Failed to analyze body composition. Please try again.',
+          [
+            {
+              text: 'Try Again',
+              onPress: () => navigation.goBack(),
+            },
+            {
+              text: 'Skip for Now',
+              style: 'cancel',
+              onPress: () => {
+                // Use a fallback body fat percentage based on survey data
+                const fallbackBodyFat = calculateFallbackBodyFat(surveyData);
+                setBodyFatPercentage(fallbackBodyFat);
+                setTimeout(() => {
+                  navigation.navigate('Paywall');
+                }, 500);
+              },
+            },
+          ]
+        );
       }
     };
+    
+    // Fallback calculation if API fails
+    const calculateFallbackBodyFat = (survey: any) => {
+      let baseBodyFat = survey.sex === 'male' ? 15 : 25;
+      
+      if (survey.exerciseFrequency === 'very-often') baseBodyFat -= 4;
+      else if (survey.exerciseFrequency === 'often') baseBodyFat -= 3;
+      else if (survey.exerciseFrequency === 'sometimes') baseBodyFat -= 2;
+      
+      return Math.max(5, Math.min(35, baseBodyFat + (Math.random() - 0.5) * 4));
+    };
 
-    // Start false analysis after a short delay
-    const timer = setTimeout(performFalseAnalysis, 1000);
+    // Start real AI analysis after a short delay
+    const timer = setTimeout(performRealAnalysis, 1000);
 
     return () => {
       pulseAnimation.stop();
       clearTimeout(timer);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - capturedImages are validated above
 
   const getAnalysisStepText = () => {
     const angleCount = capturedImages.length;

@@ -22,14 +22,16 @@ We do **not** knowingly collect, use, or store personal data from anyone under t
 
 ### A. Photographs (Personal Data)
 
-We collect:
+**IMPORTANT:** We do **NOT** store your photos.
 
-* User-submitted body photos (front/back/side)
-* Metadata associated with photo uploads (timestamp, device type)
+We temporarily process:
+
+* User-submitted body photos (front/back/side) for real-time AI analysis
+* Photos are processed in memory only and immediately discarded after analysis
 
 **Purpose:** Body composition analysis using AI.  
-**Processing:** Photos are processed by **OpenAI GPT-4o Vision API** to extract estimated metrics.  
-**Storage:** Photos are stored in secure, private **AWS S3** buckets.
+**Processing:** Photos are processed by **OpenAI GPT-4o Vision API** to extract estimated metrics. Photos are sent to OpenAI for analysis and then immediately discarded.  
+**Storage:** **None.** We do not store your photos on our servers, in cloud storage, or anywhere else. Photos exist only in memory during the analysis process and are permanently deleted immediately after.
 
 OpenAI does **not** retain your photos after processing.
 
@@ -101,7 +103,7 @@ For EU/EEA users, we rely on the following legal bases:
 
 ### 2. Amazon Web Services (AWS S3)
 
-* Stores photos in private, encrypted buckets
+* Not used - photos are not stored
 
 ### 3. Vercel
 
@@ -122,7 +124,7 @@ We only share data with these service providers as necessary to provide the App.
 
 We retain:
 
-* **Photos:** Until you delete them or request deletion
+* **Photos:** Not applicable - photos are never stored
 * **Account data:** Until your account is deleted
 * **Analytics & logs:** Up to 24 months
 * **Legal compliance data:** As required by law
@@ -135,7 +137,7 @@ You may delete your entire account and all associated data at any time.
 
 We use industry-standard protections, including:
 
-* Encrypted AWS S3 photo storage
+* No photo storage - photos are processed in memory and immediately discarded
 * HTTPS data transport
 * Access-controlled servers
 * Role-based data access
@@ -182,8 +184,8 @@ To exercise rights, email: **[privacy@shredai.app](mailto:privacy@shredai.app)**
 
 ## 10. Your Choices
 
-* You may delete photos individually or delete your entire account.
-* You may revoke camera access at any time.
+* You may revoke camera access at any time (photos are never stored anyway).
+* You may delete your entire account and all associated data at any time.
 * You may unsubscribe from marketing emails (if applicable).
 * You may disable analytics collection on your device.
 

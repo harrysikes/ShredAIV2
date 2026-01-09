@@ -1,4 +1,4 @@
-import { SurveyData } from '../state/surveyStore';
+import { SurveyData } from '../state/supabaseStore';
 import { analyzeBodyComposition, BodyCompositionAnalysis } from './bodyCompositionAnalyzer';
 
 export interface BodyFatRequest {

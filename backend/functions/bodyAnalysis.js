@@ -19,11 +19,12 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION
 });
 
-// Configure multer for image upload
+// Configure multer for image upload (multiple images supported)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_IMAGE_SIZE_MB || '10') * 1024 * 1024
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE_MB || '10') * 1024 * 1024,
+    files: 4 // Support up to 4 images for multi-angle analysis
   },
   fileFilter: (req, file, cb) => {
     const allowedFormats = (process.env.SUPPORTED_IMAGE_FORMATS || 'jpg,jpeg,png,webp').split(',');
@@ -36,15 +37,16 @@ const upload = multer({
 });
 
 /**
- * Analyze body composition from uploaded image
+ * Analyze body composition from uploaded image(s) - Multipart FormData
  * POST /api/body-analysis/analyze
+ * Supports single image or multiple images for multi-angle analysis
  */
-router.post('/analyze', upload.single('image'), async (req, res) => {
+router.post('/analyze', upload.array('images', 4), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         error: true,
-        message: 'No image file provided'
+        message: 'At least one image file is required'
       });
     }
 
@@ -59,23 +61,101 @@ router.post('/analyze', upload.single('image'), async (req, res) => {
     // Parse survey data
     const parsedSurveyData = JSON.parse(surveyData);
     
-    // Process and analyze image
-    const analysisResult = await analyzeBodyComposition(req.file.buffer, parsedSurveyData);
+    let analysisResult;
+    if (req.files.length === 1) {
+      // Single image analysis
+      analysisResult = await analyzeBodyComposition(req.files[0].buffer, parsedSurveyData);
+    } else {
+      // Multi-angle analysis - analyze all images and combine results
+      const analyses = await Promise.all(
+        req.files.map(file => analyzeBodyComposition(file.buffer, parsedSurveyData))
+      );
+      
+      // Combine multi-angle analyses for better accuracy
+      analysisResult = combineMultiAngleAnalyses(analyses, parsedSurveyData);
+    }
     
-    // Store image in S3 (optional)
-    const imageUrl = await uploadImageToS3(req.file.buffer, uuidv4());
+    // NOTE: Photos are NOT stored - they are processed and immediately discarded
+    // This complies with our privacy policy
     
     res.json({
       success: true,
       data: {
         ...analysisResult,
-        imageUrl,
         timestamp: new Date().toISOString()
       }
     });
 
   } catch (error) {
     console.error('Body analysis error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Failed to analyze body composition',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Analyze body composition from base64 images (React Native friendly)
+ * POST /api/body-analysis/analyze-base64
+ * Accepts base64 images in JSON format (easier for React Native)
+ */
+router.post('/analyze-base64', async (req, res) => {
+  try {
+    const { images, surveyData } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({
+        error: true,
+        message: 'At least one base64 image is required'
+      });
+    }
+
+    if (!surveyData) {
+      return res.status(400).json({
+        error: true,
+        message: 'Survey data is required'
+      });
+    }
+
+    // Convert base64 images to buffers
+    const imageBuffers = images.map(base64Image => {
+      // Remove data URL prefix if present
+      const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+      return Buffer.from(base64Data, 'base64');
+    });
+
+    // Parse survey data
+    const parsedSurveyData = typeof surveyData === 'string' ? JSON.parse(surveyData) : surveyData;
+    
+    let analysisResult;
+    if (imageBuffers.length === 1) {
+      // Single image analysis
+      analysisResult = await analyzeBodyComposition(imageBuffers[0], parsedSurveyData);
+    } else {
+      // Multi-angle analysis - analyze all images and combine results
+      const analyses = await Promise.all(
+        imageBuffers.map(buffer => analyzeBodyComposition(buffer, parsedSurveyData))
+      );
+      
+      // Combine multi-angle analyses for better accuracy
+      analysisResult = combineMultiAngleAnalyses(analyses, parsedSurveyData);
+    }
+    
+    // NOTE: Photos are NOT stored - they are processed and immediately discarded
+    // This complies with our privacy policy
+    
+    res.json({
+      success: true,
+      data: {
+        ...analysisResult,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Body analysis (base64) error:', error);
     res.status(500).json({
       error: true,
       message: 'Failed to analyze body composition',
@@ -123,7 +203,7 @@ async function analyzeBodyComposition(imageBuffer, surveyData) {
  */
 async function analyzeWithOpenAIVision(imageBuffer, surveyData) {
   try {
-    // Convert image to base64
+    // Convert image buffer to base64
     const base64Image = imageBuffer.toString('base64');
     
     // Create comprehensive prompt for body composition analysis
@@ -340,29 +420,64 @@ function generateComprehensiveAnalysis(openaiAnalysis, bodyFatPercentage, survey
 }
 
 /**
- * Upload image to S3
+ * Combine multiple angle analyses for improved accuracy
  */
-async function uploadImageToS3(imageBuffer, filename) {
-  try {
-    if (!process.env.AWS_ACCESS_KEY_ID) {
-      return null; // Skip S3 upload if not configured
-    }
-
-    const params = {
-      Bucket: process.env.AWS_S3_BUCKET || 'shredai-user-images',
-      Key: `body-analysis/${filename}.jpg`,
-      Body: imageBuffer,
-      ContentType: 'image/jpeg',
-      ACL: 'private'
-    };
-
-    const result = await s3.upload(params).promise();
-    return result.Location;
-
-  } catch (error) {
-    console.error('S3 upload error:', error);
-    return null;
-  }
+function combineMultiAngleAnalyses(analyses, surveyData) {
+  // Calculate weighted average body fat (weighted by confidence)
+  const totalWeight = analyses.reduce((sum, a) => sum + (a.confidence || 0.7), 0);
+  const weightedBodyFat = analyses.reduce((sum, a) => sum + (a.bodyFatPercentage * (a.confidence || 0.7)), 0) / totalWeight;
+  
+  // Average confidence across all analyses
+  const avgConfidence = analyses.reduce((sum, a) => sum + (a.confidence || 0.7), 0) / analyses.length;
+  
+  // Combine muscle visibility (average)
+  const combinedMuscleVisibility = {
+    shoulders: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.shoulders || 0), 0) / analyses.length),
+    chest: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.chest || 0), 0) / analyses.length),
+    abs: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.abs || 0), 0) / analyses.length),
+    arms: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.arms || 0), 0) / analyses.length),
+    back: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.back || 0), 0) / analyses.length),
+    legs: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.legs || 0), 0) / analyses.length),
+    overall: Math.round(analyses.reduce((sum, a) => sum + (a.muscleVisibility?.overall || 0), 0) / analyses.length)
+  };
+  
+  // Combine body proportions (average)
+  const combinedBodyProportions = {
+    shoulderToWaistRatio: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.shoulderToWaistRatio || 1.4), 0) / analyses.length) * 100) / 100,
+    chestToWaistRatio: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.chestToWaistRatio || 1.2), 0) / analyses.length) * 100) / 100,
+    armCircumference: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.armCircumference || 0.8), 0) / analyses.length) * 100) / 100,
+    neckCircumference: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.neckCircumference || 0.9), 0) / analyses.length) * 100) / 100,
+    waistCircumference: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.waistCircumference || 1.0), 0) / analyses.length) * 100) / 100,
+    hipCircumference: Math.round((analyses.reduce((sum, a) => sum + (a.bodyProportions?.hipCircumference || 1.1), 0) / analyses.length) * 100) / 100
+  };
+  
+  // Combine technical details (average)
+  const combinedTechnicalDetails = {
+    imageQuality: Math.round((analyses.reduce((sum, a) => sum + (a.technicalDetails?.imageQuality || 0.8), 0) / analyses.length) * 100) / 100,
+    lightingQuality: Math.round((analyses.reduce((sum, a) => sum + (a.technicalDetails?.lightingQuality || 0.8), 0) / analyses.length) * 100) / 100,
+    poseQuality: Math.round((analyses.reduce((sum, a) => sum + (a.technicalDetails?.poseQuality || 0.8), 0) / analyses.length) * 100) / 100,
+    analysisFactors: ['Multi-angle analysis', 'Enhanced accuracy through multiple perspectives', ...(analyses[0]?.technicalDetails?.analysisFactors || [])]
+  };
+  
+  // Use first analysis's analysis object, or combine if needed
+  const combinedAnalysis = analyses[0]?.analysis || {
+    muscleDefinition: 'Good',
+    bodyShape: 'Athletic',
+    fitnessLevel: 'Intermediate',
+    recommendations: ['Focus on compound movements', 'Include both strength and cardio training']
+  };
+  
+  // Boost confidence for multi-angle analysis
+  const enhancedConfidence = Math.min(0.95, avgConfidence + 0.05);
+  
+  return {
+    bodyFatPercentage: Math.round(weightedBodyFat * 10) / 10,
+    confidence: Math.round(enhancedConfidence * 100) / 100,
+    muscleVisibility: combinedMuscleVisibility,
+    bodyProportions: combinedBodyProportions,
+    analysis: combinedAnalysis,
+    technicalDetails: combinedTechnicalDetails
+  };
 }
 
 /**

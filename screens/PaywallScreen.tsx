@@ -12,7 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import { Button } from '../components/ui';
 import colors from '../constants/colors';
 

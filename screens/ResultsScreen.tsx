@@ -8,7 +8,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import { generateWorkoutPlan } from '../api/workoutPlanGenerator';
 import { Button } from '../components/ui';
 import colors from '../constants/colors';
@@ -44,8 +44,11 @@ export default function ResultsScreen() {
     }
     
     const saveData = async () => {
+      // Get the first captured image for upload
+      const firstImage = capturedImages.length > 0 ? capturedImages[0].base64 : null;
+      
       // Save to history (will add new entry or update if same day)
-      await addBodyFatHistory(bodyFatPercentage!, surveyData.weight?.value);
+      await addBodyFatHistory(bodyFatPercentage!, surveyData.weight?.value, firstImage || undefined);
       savedTimestampRef.current = scanId;
       
       // Generate and save workout plan

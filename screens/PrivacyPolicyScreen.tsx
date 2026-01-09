@@ -175,8 +175,13 @@ export default function PrivacyPolicyScreen() {
   const navigation = useNavigation<PrivacyPolicyScreenNavigationProp>();
 
   const handleOpenFullPolicy = () => {
-    // Open the hosted privacy policy on GitHub Pages
-    Linking.openURL('https://harrysikes.github.io/ShredAIV2/').catch(err =>
+    // TODO: Update this URL to your actual privacy policy hosting location
+    // Options:
+    // 1. GitHub Pages: https://yourusername.github.io/ShredAIV2/
+    // 2. Custom domain: https://shredai.app/privacy-policy
+    // 3. Your website: https://yoursite.com/privacy
+    const privacyPolicyUrl = 'https://shredai.app/privacy-policy'; // Update this!
+    Linking.openURL(privacyPolicyUrl).catch(err =>
       console.error('Failed to open privacy policy URL:', err)
     );
   };

@@ -12,7 +12,7 @@ import { CameraView, CameraType } from 'expo-camera';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore, CameraAngle } from '../state/surveyStore';
+import { useSurveyStore, CameraAngle } from '../state/supabaseStore';
 import { detectHuman, HumanDetectionResponse } from '../api/humanDetectionApi';
 import { Button } from '../components/ui';
 import colors from '../constants/colors';
@@ -459,7 +459,7 @@ export default function CameraScreen() {
         </View>
 
         {/* Live Quality Score with Individual Metrics */}
-        {!isCountingDown && humanDetected === null && !isAnalyzing && (
+        {humanDetected === null && !isAnalyzing && (
           <View style={styles.qualityScoreContainer}>
             <Text style={styles.qualityScoreLabel}>Setup Quality</Text>
             <View style={styles.qualityScoreRow}>

@@ -9,7 +9,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useSurveyStore } from '../state/surveyStore';
+import { useSurveyStore } from '../state/supabaseStore';
 import colors from '../constants/colors';
 import Svg, { Polyline, Circle, Line, G, Text as SvgText } from 'react-native-svg';
 import { getCurrentWeeklyChallenge } from '../utils/weeklyChallenge';
