@@ -458,8 +458,8 @@ export default function CameraScreen() {
           <Text style={styles.angleSubtitle}>{getAngleInstructions()}</Text>
         </View>
 
-        {/* Live Quality Score with Individual Metrics */}
-        {humanDetected === null && !isAnalyzing && (
+        {/* Live Quality Score with Individual Metrics - Always visible during scanning */}
+        {humanDetected === null && (
           <View style={styles.qualityScoreContainer}>
             <Text style={styles.qualityScoreLabel}>Setup Quality</Text>
             <View style={styles.qualityScoreRow}>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
@@ -33,38 +33,109 @@ export type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+// Scan flow screens that can be accessed without auth (NEVER redirect from these)
+const SCAN_FLOW_SCREENS = ['Loading', 'Results', 'Paywall', 'Camera'];
+// Screens that require authentication (excluding scan flow screens)
+const PROTECTED_ROUTES = ['Home', 'Survey', 'CameraInstructions', 'BodyFatHistory', 'WorkoutPlan', 'WeeklyChallenge'];
+
+function isScanFlowScreen(routeName: string | undefined): boolean {
+  return routeName ? SCAN_FLOW_SCREENS.includes(routeName) : false;
+}
+
+function isProtectedRoute(routeName: string | undefined): boolean {
+  return routeName ? PROTECTED_ROUTES.includes(routeName) : false;
+}
+
 export default function AppNavigator() {
   const { isAuthenticated } = useSurveyStore();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const isNavigatingRef = useRef(false);
+  const lastCheckedRouteRef = useRef<string | null>(null);
 
   // Handle auth state changes and navigate accordingly
   useEffect(() => {
     if (!navigationRef.isReady()) return;
 
     const currentRoute = navigationRef.getCurrentRoute();
-    // Screens that require authentication (excluding scan flow screens)
-    const protectedRoutes = ['Home', 'Survey', 'CameraInstructions', 'Camera', 'BodyFatHistory', 'WorkoutPlan', 'WeeklyChallenge'];
-    // Scan flow screens that can be accessed without auth (but will need auth to save data)
-    const scanFlowScreens = ['Loading', 'Results', 'Paywall'];
-    const isOnProtectedRoute = currentRoute && protectedRoutes.includes(currentRoute.name);
-    const isOnScanFlowScreen = currentRoute && scanFlowScreens.includes(currentRoute.name);
+    const currentRouteName = currentRoute?.name || null;
 
-    if (!isAuthenticated) {
-      // Only redirect to Auth if we're on a protected route (not already on Auth or scan flow screens)
-      // Allow scan flow to continue even without auth (data just won't be saved)
-      if (currentRoute?.name !== 'Auth' && isOnProtectedRoute && !isOnScanFlowScreen) {
-        navigationRef.navigate('Auth');
-      }
-    } else {
-      // If authenticated and currently on Auth screen, navigate to Home
-      if (currentRoute?.name === 'Auth') {
-        navigationRef.navigate('Home');
-      }
+    // NEVER redirect if we're on a scan flow screen - allow the flow to complete
+    // This check happens FIRST before any other logic
+    if (isScanFlowScreen(currentRouteName || undefined)) {
+      // Completely skip auth redirect logic for scan flow screens
+      return;
     }
+
+    // Don't check the same route twice in a row (prevents unnecessary checks)
+    if (currentRouteName === lastCheckedRouteRef.current) {
+      return;
+    }
+    lastCheckedRouteRef.current = currentRouteName;
+
+    // Add a delay to ensure navigation has fully completed
+    const timeoutId = setTimeout(() => {
+      // Double-check we're still not on a scan flow screen
+      const route = navigationRef.getCurrentRoute();
+      const routeName = route?.name;
+      
+      if (isScanFlowScreen(routeName || undefined)) {
+        return; // Still on scan flow, don't redirect
+      }
+
+      if (!isAuthenticated) {
+        // Only redirect to Auth if we're on a protected route (not already on Auth)
+        if (routeName !== 'Auth' && isProtectedRoute(routeName || undefined)) {
+          navigationRef.navigate('Auth');
+        }
+      } else {
+        // If authenticated and currently on Auth screen, navigate to Home
+        if (routeName === 'Auth') {
+          navigationRef.navigate('Home');
+        }
+      }
+    }, 500); // Longer delay to ensure navigation completes
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [isAuthenticated, navigationRef]);
 
+  // Also listen to navigation state changes to check route
+  const handleStateChange = () => {
+    if (!navigationRef.isReady()) return;
+    
+    const currentRoute = navigationRef.getCurrentRoute();
+    const currentRouteName = currentRoute?.name || null;
+
+    // NEVER redirect if we're on a scan flow screen
+    if (isScanFlowScreen(currentRouteName || undefined)) {
+      lastCheckedRouteRef.current = currentRouteName;
+      return;
+    }
+
+    // Small delay to ensure navigation completed
+    setTimeout(() => {
+      const route = navigationRef.getCurrentRoute();
+      const routeName = route?.name;
+      
+      if (isScanFlowScreen(routeName || undefined)) {
+        return;
+      }
+
+      if (!isAuthenticated) {
+        if (routeName !== 'Auth' && isProtectedRoute(routeName || undefined)) {
+          navigationRef.navigate('Auth');
+        }
+      } else {
+        if (routeName === 'Auth') {
+          navigationRef.navigate('Home');
+        }
+      }
+    }, 300);
+  };
+
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} onStateChange={handleStateChange}>
       <StatusBar style="dark" />
       <Stack.Navigator
         initialRouteName={isAuthenticated ? "Home" : "Auth"}

@@ -17,7 +17,8 @@ type LoadingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Load
 
 export default function LoadingScreen() {
   const navigation = useNavigation<LoadingScreenNavigationProp>();
-  const { surveyData, capturedImages, setBodyFatPercentage, setIsLoading } = useSurveyStore();
+  const { surveyData, capturedImages, setBodyFatPercentage } = useSurveyStore();
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
   // Validate that we have captured images before proceeding
   useEffect(() => {
@@ -85,7 +86,7 @@ export default function LoadingScreen() {
     // Real AI analysis using OpenAI GPT-4o Vision API
     const performRealAnalysis = async () => {
       try {
-        setIsLoading(true);
+        setIsAnalyzing(true);
         
         // Step 1: Human detection (update UI)
         setAnalysisStep(1);
@@ -131,16 +132,16 @@ export default function LoadingScreen() {
         
         // Set the real body fat percentage from OpenAI analysis
         setBodyFatPercentage(bodyFatPercentage);
-        setIsLoading(false);
+        setIsAnalyzing(false);
         
-        // Navigate to paywall after a short delay
+        // Navigate to paywall after a short delay (keep screen visible)
         setTimeout(() => {
           navigation.navigate('Paywall');
-        }, 500);
+        }, 1000);
         
       } catch (error: any) {
         console.error('Error during AI analysis:', error);
-        setIsLoading(false);
+        setIsAnalyzing(false);
         
         // Show error alert
         Alert.alert(
