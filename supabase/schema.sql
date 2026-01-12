@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 -- USERS TABLE (extends Supabase auth.users)
 -- ============================================
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE public.profiles (
 -- ============================================
 -- SURVEY DATA
 -- ============================================
-CREATE TABLE public.survey_data (
+CREATE TABLE IF NOT EXISTS public.survey_data (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   sex TEXT CHECK (sex IN ('male', 'female')),
@@ -40,7 +40,7 @@ CREATE TABLE public.survey_data (
 -- ============================================
 -- BODY FAT HISTORY
 -- ============================================
-CREATE TABLE public.body_fat_history (
+CREATE TABLE IF NOT EXISTS public.body_fat_history (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -52,12 +52,12 @@ CREATE TABLE public.body_fat_history (
   UNIQUE(user_id, date)
 );
 
-CREATE INDEX idx_body_fat_history_user_date ON public.body_fat_history(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_body_fat_history_user_date ON public.body_fat_history(user_id, date DESC);
 
 -- ============================================
 -- WORKOUT PLANS
 -- ============================================
-CREATE TABLE public.workout_plans (
+CREATE TABLE IF NOT EXISTS public.workout_plans (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   goal TEXT NOT NULL,
@@ -69,12 +69,12 @@ CREATE TABLE public.workout_plans (
   is_active BOOLEAN DEFAULT true
 );
 
-CREATE INDEX idx_workout_plans_user_active ON public.workout_plans(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_workout_plans_user_active ON public.workout_plans(user_id, is_active);
 
 -- ============================================
 -- WORKOUT TRACKING
 -- ============================================
-CREATE TABLE public.workout_tracking (
+CREATE TABLE IF NOT EXISTS public.workout_tracking (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   day_one DATE NOT NULL, -- First BF% log date
@@ -86,7 +86,7 @@ CREATE TABLE public.workout_tracking (
 -- ============================================
 -- WORKOUT COMPLETIONS
 -- ============================================
-CREATE TABLE public.workout_completions (
+CREATE TABLE IF NOT EXISTS public.workout_completions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -96,12 +96,12 @@ CREATE TABLE public.workout_completions (
   UNIQUE(user_id, date)
 );
 
-CREATE INDEX idx_workout_completions_user_date ON public.workout_completions(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_workout_completions_user_date ON public.workout_completions(user_id, date DESC);
 
 -- ============================================
 -- WORKOUT MISSES
 -- ============================================
-CREATE TABLE public.workout_misses (
+CREATE TABLE IF NOT EXISTS public.workout_misses (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -111,12 +111,12 @@ CREATE TABLE public.workout_misses (
   UNIQUE(user_id, date)
 );
 
-CREATE INDEX idx_workout_misses_user_date ON public.workout_misses(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_workout_misses_user_date ON public.workout_misses(user_id, date DESC);
 
 -- ============================================
 -- CALIBRATION DATA (for accuracy improvement)
 -- ============================================
-CREATE TABLE public.calibration_data (
+CREATE TABLE IF NOT EXISTS public.calibration_data (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   analysis_id TEXT,
@@ -131,7 +131,7 @@ CREATE TABLE public.calibration_data (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_calibration_user ON public.calibration_data(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_calibration_user ON public.calibration_data(user_id, created_at DESC);
 
 -- ============================================
 -- ROW LEVEL SECURITY POLICIES
@@ -148,40 +148,50 @@ ALTER TABLE public.workout_misses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.calibration_data ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read/update their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Survey Data: Users can manage their own survey data
+DROP POLICY IF EXISTS "Users can manage own survey data" ON public.survey_data;
 CREATE POLICY "Users can manage own survey data" ON public.survey_data
   FOR ALL USING (auth.uid() = user_id);
 
 -- Body Fat History: Users can manage their own history
+DROP POLICY IF EXISTS "Users can manage own body fat history" ON public.body_fat_history;
 CREATE POLICY "Users can manage own body fat history" ON public.body_fat_history
   FOR ALL USING (auth.uid() = user_id);
 
 -- Workout Plans: Users can manage their own plans
+DROP POLICY IF EXISTS "Users can manage own workout plans" ON public.workout_plans;
 CREATE POLICY "Users can manage own workout plans" ON public.workout_plans
   FOR ALL USING (auth.uid() = user_id);
 
 -- Workout Tracking: Users can manage their own tracking
+DROP POLICY IF EXISTS "Users can manage own workout tracking" ON public.workout_tracking;
 CREATE POLICY "Users can manage own workout tracking" ON public.workout_tracking
   FOR ALL USING (auth.uid() = user_id);
 
 -- Workout Completions: Users can manage their own completions
+DROP POLICY IF EXISTS "Users can manage own workout completions" ON public.workout_completions;
 CREATE POLICY "Users can manage own workout completions" ON public.workout_completions
   FOR ALL USING (auth.uid() = user_id);
 
 -- Workout Misses: Users can manage their own misses
+DROP POLICY IF EXISTS "Users can manage own workout misses" ON public.workout_misses;
 CREATE POLICY "Users can manage own workout misses" ON public.workout_misses
   FOR ALL USING (auth.uid() = user_id);
 
 -- Calibration Data: Users can manage their own calibration data
+DROP POLICY IF EXISTS "Users can manage own calibration data" ON public.calibration_data;
 CREATE POLICY "Users can manage own calibration data" ON public.calibration_data
   FOR ALL USING (auth.uid() = user_id);
 
@@ -198,12 +208,15 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_survey_data_updated_at ON public.survey_data;
 CREATE TRIGGER update_survey_data_updated_at BEFORE UPDATE ON public.survey_data
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_workout_tracking_updated_at ON public.workout_tracking;
 CREATE TRIGGER update_workout_tracking_updated_at BEFORE UPDATE ON public.workout_tracking
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -217,6 +230,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

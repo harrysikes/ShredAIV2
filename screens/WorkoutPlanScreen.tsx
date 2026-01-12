@@ -158,7 +158,9 @@ export default function WorkoutPlanScreen() {
 
   const handleCompleteWorkout = async () => {
     if (selectedWorkout) {
-      await completeWorkout(selectedWorkout.date);
+      // completeWorkout requires date and workoutType
+      const workoutType = selectedWorkout.type === 'workout' ? selectedWorkout.title : 'rest';
+      await completeWorkout(selectedWorkout.date, workoutType);
       setShowWorkoutDetail(false);
       setSelectedWorkout(null);
       // State update will automatically trigger re-render via Zustand

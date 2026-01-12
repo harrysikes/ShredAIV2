@@ -12,9 +12,18 @@ export default function App() {
 
   useEffect(() => {
     // Initialize Supabase auth and load profile data
+    console.log('[APP DEBUG] Initializing app...');
     const init = async () => {
+      console.log('[APP DEBUG] Calling initializeAuth...');
       await initializeAuth();
+      const authState = useSurveyStore.getState();
+      console.log('[APP DEBUG] Auth initialized:', {
+        isAuthenticated: authState.isAuthenticated,
+        hasUser: !!authState.user,
+        userId: authState.user?.id,
+      });
       setInitializing(false);
+      console.log('[APP DEBUG] App initialization complete');
     };
     init();
   }, []);

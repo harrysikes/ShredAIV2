@@ -30,35 +30,90 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
+    console.log('[AUTH SCREEN DEBUG] handleAuth called:', { isSignUp, email: email ? 'provided' : 'missing', hasPassword: !!password });
+    
     if (!email || !password) {
+      console.log('[AUTH SCREEN DEBUG] Validation failed: missing email or password');
       Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
     if (isSignUp && !name) {
+      console.log('[AUTH SCREEN DEBUG] Validation failed: missing name for signup');
       Alert.alert('Error', 'Please enter your name');
       return;
     }
 
     setLoading(true);
+    console.log('[AUTH SCREEN DEBUG] Starting authentication...');
     try {
-      let result;
+      let result: { error: Error | null; needsEmailConfirmation?: boolean };
       if (isSignUp) {
+        console.log('[AUTH SCREEN DEBUG] Calling signUp...');
         result = await signUp(email, password, name);
       } else {
+        console.log('[AUTH SCREEN DEBUG] Calling signIn...');
         result = await signIn(email, password);
       }
 
+      console.log('[AUTH SCREEN DEBUG] Auth result:', {
+        hasError: !!result.error,
+        errorMessage: result.error?.message,
+        needsEmailConfirmation: result.needsEmailConfirmation,
+      });
+
       if (result.error) {
-        Alert.alert('Error', result.error.message || 'Authentication failed');
+        let errorMessage = result.error.message || 'Authentication failed';
+        
+        // Handle email confirmation requirement (only for sign-up)
+        if (isSignUp && (result.needsEmailConfirmation || errorMessage === 'EMAIL_CONFIRMATION_REQUIRED')) {
+          Alert.alert(
+            'Check Your Email',
+            'We sent you a confirmation email. Please check your inbox and click the confirmation link to activate your account. After confirming, you can sign in.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Switch to sign-in mode after alert
+                  setIsSignUp(false);
+                },
+              },
+            ]
+          );
+          return; // Don't show generic error
+        }
+        
+        // Provide more helpful error messages
+        if (errorMessage.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (errorMessage.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+        } else if (errorMessage.includes('User already registered')) {
+          errorMessage = 'This email is already registered. Please sign in instead.';
+        }
+        
+        console.log('[AUTH SCREEN DEBUG] Showing error alert:', errorMessage);
+        Alert.alert('Authentication Error', errorMessage);
       } else {
-        // Navigation will be handled by auth state change
-        navigation.navigate('Home');
+        console.log('[AUTH SCREEN DEBUG] Auth successful, checking state before navigation...');
+        const { isAuthenticated, user } = useSurveyStore.getState();
+        console.log('[AUTH SCREEN DEBUG] Current auth state:', {
+          isAuthenticated,
+          hasUser: !!user,
+          userId: user?.id,
+        });
+        
+        // Don't manually navigate - let AppNavigator handle it based on auth state
+        // The onAuthStateChange listener in initializeAuth will trigger navigation
+        // This prevents race conditions between manual navigation and AppNavigator redirects
+        console.log('[AUTH SCREEN DEBUG] Auth successful - AppNavigator will handle navigation via auth state change');
       }
     } catch (error: any) {
+      console.error('[AUTH SCREEN DEBUG] Exception in handleAuth:', error);
       Alert.alert('Error', error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
+      console.log('[AUTH SCREEN DEBUG] handleAuth completed');
     }
   };
 

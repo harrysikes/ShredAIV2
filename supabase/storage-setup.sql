@@ -1,38 +1,29 @@
--- Supabase Storage Setup for ShredAI V2
--- Run this in your Supabase SQL Editor
+-- ShredAI V2 Storage Setup
+-- NOTE: Photo storage has been removed per privacy policy
+-- Photos are processed in memory and immediately discarded, never stored
+-- This file cleans up any existing photo storage policies that may have been created previously
 
--- Create private bucket for user body photos
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'user-photos',
-  'user-photos',
-  false, -- Private bucket
-  10485760, -- 10MB limit
-  ARRAY['image/jpeg', 'image/png', 'image/heic', 'image/webp']
-)
-ON CONFLICT (id) DO NOTHING;
+-- Clean up any existing photo storage policies (safe to run multiple times)
+-- This prevents errors if you try to create policies that already exist
 
--- Storage policies for user-photos bucket
--- Users can upload their own photos
-CREATE POLICY "Users can upload own photos" ON storage.objects
-  FOR INSERT WITH CHECK (
-    bucket_id = 'user-photos' AND
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+DO $$
+BEGIN
+  -- Drop all photo storage policies if they exist (to avoid conflicts)
+  DROP POLICY IF EXISTS "Users can upload own photos" ON storage.objects;
+  DROP POLICY IF EXISTS "Users can view own photos" ON storage.objects;
+  DROP POLICY IF EXISTS "Users can delete own photos" ON storage.objects;
+  DROP POLICY IF EXISTS "Users can update own photos" ON storage.objects;
+  
+  RAISE NOTICE '✅ Photo storage policies cleaned up (if they existed)';
+EXCEPTION
+  WHEN OTHERS THEN
+    -- If policies don't exist or other errors, continue anyway
+    RAISE NOTICE 'ℹ️  No existing policies to clean up or already cleaned';
+END $$;
 
--- Users can view their own photos
-CREATE POLICY "Users can view own photos" ON storage.objects
-  FOR SELECT USING (
-    bucket_id = 'user-photos' AND
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+-- Optional: Drop the storage bucket if it exists (uncomment if you want to remove it completely)
+-- DROP BUCKET IF EXISTS user-photos;
 
--- Users can delete their own photos
-CREATE POLICY "Users can delete own photos" ON storage.objects
-  FOR DELETE USING (
-    bucket_id = 'user-photos' AND
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
-
--- Note: File paths should be structured as: {user_id}/{timestamp}_{filename}
--- Example: "550e8400-e29b-41d4-a716-446655440000/2024-01-15T10:30:00Z_front.jpg"
+-- IMPORTANT: We do NOT create any storage buckets or policies
+-- because photos are NOT stored per our privacy policy.
+-- Photos are processed by OpenAI GPT-4o Vision API in memory and immediately discarded.

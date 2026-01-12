@@ -58,8 +58,20 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 1. Go to Authentication > Settings in Supabase dashboard
 2. Configure email authentication (enabled by default)
-3. Set up email templates if desired
-4. Configure redirect URLs for your app
+3. **For Development: Disable Email Confirmation (Recommended)**
+   - Scroll to "Email Auth" section
+   - Find "Enable email confirmations" toggle
+   - **Turn it OFF** for development/testing
+   - This allows users to sign up and immediately sign in without checking email
+   - **⚠️ Re-enable this in production for security**
+4. Set up email templates if desired
+5. Configure redirect URLs for your app
+
+**Why disable email confirmation for development?**
+- Faster testing without waiting for emails
+- No need to check spam folders
+- Immediate access after sign-up
+- The app now handles email confirmation gracefully, but disabling it makes testing easier
 
 ## Step 5: Row Level Security Verification
 
@@ -110,6 +122,17 @@ The new `supabaseStore.ts` replaces `surveyStore.ts`. To migrate:
 - Verify key is correct (starts with `eyJ...`)
 - Ensure it's only used on backend, never exposed to client
 - Check that key has not been rotated
+
+### "Sign-up doesn't let me through / Email confirmation required"
+- **Quick Fix**: Disable email confirmation in Supabase Dashboard
+  - Go to Authentication > Settings
+  - Scroll to "Email Auth" section
+  - Turn OFF "Enable email confirmations"
+  - Users can now sign up and immediately sign in
+- **Alternative**: Check your email for the confirmation link
+  - The app now shows a helpful message when email confirmation is required
+  - Click the confirmation link in your email, then sign in
+- **Production**: Re-enable email confirmation for security
 
 ## Security Checklist
 

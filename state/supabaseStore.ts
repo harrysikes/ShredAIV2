@@ -60,7 +60,7 @@ export interface AppState {
   isSubscribed: boolean;
   
   // Auth actions
-  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null; needsEmailConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   initializeAuth: () => Promise<void>;
@@ -132,24 +132,73 @@ export const useSurveyStore = create<AppState>((set, get) => ({
   // ============================================
   
   initializeAuth: async () => {
+    console.log('[AUTH DEBUG] Initializing auth...');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      console.log('[AUTH DEBUG] getSession result:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        email: session?.user?.email,
+        error: error?.message,
+      });
+      
+      if (error) {
+        console.error('[AUTH DEBUG] Error getting session:', error);
+        set({ session: null, user: null, isAuthenticated: false });
+        return;
+      }
+      
+      console.log('[AUTH DEBUG] Setting initial auth state:', {
+        hasSession: !!session,
+        isAuthenticated: !!session,
+      });
       set({ session, user: session?.user ?? null, isAuthenticated: !!session });
       
+      // Load profile data if we have a session
+      if (session) {
+        console.log('[AUTH DEBUG] Loading profile data on init...');
+        try {
+          await get().loadProfileData();
+        } catch (loadError) {
+          console.error('[AUTH DEBUG] Error loading profile data on init:', loadError);
+        }
+      }
+      
       // Listen for auth changes
-      supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[AUTH DEBUG] Setting up auth state change listener...');
+      supabase.auth.onAuthStateChange((event, session) => {
+        console.log('[AUTH DEBUG] Auth state changed:', {
+          event,
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          email: session?.user?.email,
+        });
         set({ session, user: session?.user ?? null, isAuthenticated: !!session });
-        if (session) {
-          // Load user data when authenticated
-          get().loadProfileData();
+        
+        if (session && event === 'SIGNED_IN') {
+          console.log('[AUTH DEBUG] SIGNED_IN event detected, loading profile data...');
+          // Only load profile data on explicit sign in
+          get().loadProfileData().catch(err => {
+            console.error('[AUTH DEBUG] Error loading profile data on auth change:', err);
+          });
+        } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          console.log('[AUTH DEBUG] SIGNED_OUT or TOKEN_REFRESHED, resetting survey data');
+          // Reset survey data on sign out
+          set({ surveyData: initialSurveyData });
         }
       });
+      console.log('[AUTH DEBUG] Auth initialization complete');
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      console.error('[AUTH DEBUG] Error initializing auth:', error);
+      set({ session: null, user: null, isAuthenticated: false });
     }
   },
 
   signUp: async (email: string, password: string, name?: string) => {
+    console.log('[AUTH DEBUG] Sign up attempt:', { email, hasName: !!name });
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -161,46 +210,130 @@ export const useSurveyStore = create<AppState>((set, get) => ({
         },
       });
 
+      console.log('[AUTH DEBUG] Sign up response:', {
+        hasError: !!error,
+        errorMessage: error?.message,
+        errorCode: error?.status,
+        hasUser: !!data.user,
+        hasSession: !!data.session,
+        userId: data.user?.id,
+        emailConfirmed: data.user?.email_confirmed_at ? true : false,
+      });
+
       if (error) {
-        return { error };
+        console.error('[AUTH DEBUG] Sign up error:', error);
+        return { error, needsEmailConfirmation: false };
       }
 
-      if (data.session) {
+      // Supabase might not return a session if email confirmation is required
+      // Check if email confirmation is needed
+      const needsEmailConfirmation = !data.session && !!data.user && !data.user.email_confirmed_at;
+      
+      if (needsEmailConfirmation) {
+        console.log('[AUTH DEBUG] Email confirmation required - no session returned');
+        // Don't set auth state - user needs to confirm email first
+        // Return a special error indicating email confirmation is needed
+        return { 
+          error: new Error('EMAIL_CONFIRMATION_REQUIRED'),
+          needsEmailConfirmation: true 
+        };
+      }
+
+      // If we have a session, proceed normally
+      if (data.user && data.session) {
+        console.log('[AUTH DEBUG] Setting auth state after signup:', {
+          hasSession: !!data.session,
+          userId: data.user.id,
+          isAuthenticated: true,
+        });
         set({ 
           session: data.session, 
           user: data.user, 
           isAuthenticated: true 
         });
+        
+        // Load profile data in background
+        console.log('[AUTH DEBUG] Loading profile data after signup...');
+        get().loadProfileData().catch(err => {
+          console.warn('[AUTH DEBUG] Profile data load failed on signup (non-critical):', err);
+        });
+      } else {
+        console.warn('[AUTH DEBUG] Unexpected signup result: user but no session and no confirmation required');
+        return { 
+          error: new Error('Account created but unable to sign in. Please try signing in manually.'), 
+          needsEmailConfirmation: false 
+        };
       }
 
-      return { error: null };
+      return { error: null, needsEmailConfirmation: false };
     } catch (error) {
-      return { error: error as Error };
+      console.error('[AUTH DEBUG] Sign up exception:', error);
+      return { error: error as Error, needsEmailConfirmation: false };
     }
   },
 
   signIn: async (email: string, password: string) => {
+    console.log('[AUTH DEBUG] Sign in attempt:', { email });
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('[AUTH DEBUG] Sign in response:', {
+        hasError: !!error,
+        errorMessage: error?.message,
+        errorCode: error?.status,
+        hasUser: !!data.user,
+        hasSession: !!data.session,
+        userId: data.user?.id,
+        email: data.user?.email,
+      });
+
       if (error) {
+        console.error('[AUTH DEBUG] Sign in error:', error);
         return { error };
       }
 
-      if (data.session) {
-        set({ 
-          session: data.session, 
-          user: data.user, 
-          isAuthenticated: true 
-        });
-        await get().loadProfileData();
+      // Check if we have a session - this is the critical check
+      if (!data.session) {
+        console.error('[AUTH DEBUG] No session returned after sign in - email confirmation may be required');
+        return { 
+          error: new Error('No session returned. Your account may need email confirmation.') 
+        };
       }
+
+      // Set auth state immediately
+      console.log('[AUTH DEBUG] Setting auth state after signin:', {
+        hasSession: !!data.session,
+        userId: data.user?.id,
+        isAuthenticated: true,
+      });
+      set({ 
+        session: data.session, 
+        user: data.user, 
+        isAuthenticated: true 
+      });
+      
+      // Verify state was set
+      const currentState = get();
+      console.log('[AUTH DEBUG] Auth state after set:', {
+        isAuthenticated: currentState.isAuthenticated,
+        hasUser: !!currentState.user,
+        userId: currentState.user?.id,
+      });
+      
+      // Load profile data in background - don't block sign in if this fails
+      // User should explicitly fill out survey each time
+      console.log('[AUTH DEBUG] Loading profile data after signin...');
+      get().loadProfileData().catch((loadError) => {
+        console.error('[AUTH DEBUG] Error loading profile data (non-blocking):', loadError);
+        // Sign in still succeeds even if profile loading fails
+      });
 
       return { error: null };
     } catch (error) {
+      console.error('[AUTH DEBUG] Sign in exception:', error);
       return { error: error as Error };
     }
   },
@@ -342,15 +475,17 @@ export const useSurveyStore = create<AppState>((set, get) => ({
           onConflict: 'user_id,date',
         })
         .select()
-        .single();
+        .maybeSingle(); // Use maybeSingle() - returns null if no rows
 
       if (error) {
-        // If table doesn't exist or other database error, log but don't throw
-        console.error('Error saving body fat history to database:', error);
-        console.error('This might be because the database tables haven\'t been created yet.');
-        console.error('Please run the SQL files in Supabase: schema.sql');
-        // Still update local state
-      } else {
+        // Only log if it's not a "no rows" error (PGRST116)
+        if (error.code !== 'PGRST116') {
+          console.error('Error saving body fat history to database:', error);
+          console.error('This might be because the database tables haven\'t been created yet.');
+          console.error('Please run the SQL files in Supabase: schema.sql');
+        }
+        // Still update local state even if database save failed
+      } else if (data) {
         // Successfully saved to database
         const entry: BodyFatHistoryEntry = {
           date: data.date,
@@ -521,9 +656,12 @@ export const useSurveyStore = create<AppState>((set, get) => ({
         .eq('is_active', true)
         .order('generated_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle() - returns null if no rows
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error loading workout plan:', error);
+        return;
+      }
 
       if (data) {
         set({ workoutPlan: data.plan_data });
@@ -624,12 +762,16 @@ export const useSurveyStore = create<AppState>((set, get) => ({
     if (!user) return;
 
     try {
-      // Load day one
-      const { data: trackingData } = await supabase
+      // Load day one - use maybeSingle() since user might not have tracking data yet
+      const { data: trackingData, error: trackingError } = await supabase
         .from('workout_tracking')
         .select('day_one')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() - returns null if no rows
+      
+      if (trackingError && trackingError.code !== 'PGRST116') {
+        console.warn('Error loading workout tracking:', trackingError);
+      }
 
       // Load completions
       const { data: completions } = await supabase
@@ -671,55 +813,49 @@ export const useSurveyStore = create<AppState>((set, get) => ({
   
   loadProfileData: async () => {
     const { user } = get();
-    if (!user) return;
+    if (!user) {
+      console.warn('loadProfileData called but no user is authenticated');
+      return;
+    }
 
     try {
-      // Load survey data
-      const { data: surveyData } = await supabase
-        .from('survey_data')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      // DON'T auto-load survey data - user should fill it out fresh each time
+      // Only load persistent data (history, workout plans, etc.)
+      
+      // Load subscription status (non-blocking)
+      // Don't use .single() - user might not have a profile row yet
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('subscription_tier, subscription_expires_at')
+          .eq('id', user.id)
+          .maybeSingle(); // Use maybeSingle() instead of single() - returns null if no row
 
-      if (surveyData) {
-        const data: SurveyData = {
-          sex: surveyData.sex,
-          dateOfBirth: surveyData.date_of_birth ? new Date(surveyData.date_of_birth) : null,
-          height: surveyData.height_feet !== null ? {
-            feet: surveyData.height_feet,
-            inches: surveyData.height_inches || 0,
-          } : null,
-          weight: surveyData.weight_value !== null ? {
-            value: surveyData.weight_value,
-            unit: surveyData.weight_unit || 'lbs',
-          } : null,
-          exerciseFrequency: surveyData.exercise_frequency,
-          workoutGoal: surveyData.workout_goal,
-        };
-        set({ surveyData: data });
+        if (profileError) {
+          // Only log if it's not a "no rows" error
+          if (profileError.code !== 'PGRST116') {
+            console.warn('Error loading profile (non-critical):', profileError);
+          }
+        } else if (profileData) {
+          const isSubscribed = profileData.subscription_tier !== 'free' && 
+            (!profileData.subscription_expires_at || new Date(profileData.subscription_expires_at) > new Date());
+          set({ isSubscribed });
+        }
+        // If profileData is null, user just doesn't have a profile yet - that's fine
+      } catch (profileErr) {
+        console.warn('Profile loading failed (non-critical):', profileErr);
       }
 
-      // Load subscription status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_tier, subscription_expires_at')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        const isSubscribed = profile.subscription_tier !== 'free' && 
-          (!profile.subscription_expires_at || new Date(profile.subscription_expires_at) > new Date());
-        set({ isSubscribed });
-      }
-
-      // Load all data
-      await Promise.all([
-        get().loadBodyFatHistory(),
-        get().loadWorkoutPlan(),
-        get().loadWorkoutTracking(),
+      // Load persistent data (history, workout plans) - each independently
+      // Don't fail if one fails
+      Promise.allSettled([
+        get().loadBodyFatHistory().catch(err => console.warn('Body fat history load failed:', err)),
+        get().loadWorkoutPlan().catch(err => console.warn('Workout plan load failed:', err)),
+        get().loadWorkoutTracking().catch(err => console.warn('Workout tracking load failed:', err)),
       ]);
     } catch (error) {
       console.error('Error loading profile data:', error);
+      // Don't throw - this is non-critical
     }
   },
 
