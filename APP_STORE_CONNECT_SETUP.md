@@ -19,7 +19,7 @@ Visit: https://developer.apple.com/account/resources/identifiers/list
 - **Description:** `ShredAI V2` (or any description you like)
 - **Bundle ID:** 
   - Select **"Explicit"**
-  - Enter exactly: `com.shredai.v2`
+  - Enter exactly: `com.shredai`
   - ⚠️ This must match your `app.json` bundle identifier!
 
 ### 1.4 Enable Capabilities
@@ -34,7 +34,7 @@ Check these capabilities:
 - Click **"Register"**
 - ✅ You should see "Registration Complete"
 
-**Important:** You'll use this App ID (`com.shredai.v2`) when creating your app in App Store Connect.
+**Important:** You'll use this App ID (`com.shredai`) when creating your app in App Store Connect.
 
 ---
 
@@ -65,12 +65,12 @@ Check these capabilities:
 - Select **English (U.S.)**
 
 **Bundle ID:**
-- Click dropdown → Select `com.shredai.v2`
+- Click dropdown → Select `com.shredai`
 - ⚠️ This should appear if you created the App ID correctly
 - If it doesn't appear, wait 5-10 minutes and refresh
 
 **SKU:**
-- Enter: `shredai-v2` (or any unique identifier)
+- Enter: `shredai` (or any unique identifier)
 - This is just an internal identifier, not visible to users
 - Must be unique to your account
 
@@ -170,7 +170,7 @@ While you can't submit without a build, you can prepare metadata:
 ## 📋 Quick Checklist
 
 **App ID Setup:**
-- [ ] App ID created: `com.shredai.v2`
+- [ ] App ID created: `com.shredai`
 - [ ] In-App Purchase capability enabled
 - [ ] Push Notifications enabled (optional)
 
@@ -207,7 +207,7 @@ Once you complete these steps:
 
 ## ⚠️ Important Notes
 
-1. **Bundle ID:** Must be `com.shredai.v2` - matches your `app.json`
+1. **Bundle ID:** Must be `com.shredai` - matches your `app.json`
 2. **App Name:** "ShredAI" - maximum 30 characters
 3. **Cannot Change:** Bundle ID and SKU after creation
 4. **Privacy Policy:** Must be publicly accessible (GitHub Pages)

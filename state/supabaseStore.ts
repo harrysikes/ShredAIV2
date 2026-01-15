@@ -638,8 +638,16 @@ export const useSurveyStore = create<AppState>((set, get) => ({
       }
 
       set({ workoutPlan: plan });
-    } catch (error) {
-      console.error('Error saving workout plan:', error);
+    } catch (error: any) {
+      // Log error details properly (don't render error objects)
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      console.error('Error saving workout plan:', errorMessage);
+      console.error('Error details:', {
+        message: errorMessage,
+        code: error?.code,
+        details: error?.details,
+      });
+      // Still set the plan locally even if save fails
       set({ workoutPlan: plan });
     }
   },

@@ -109,9 +109,26 @@ export async function analyzeBodyComposition(
 
   } catch (error: any) {
     console.error('Body analysis API error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      url: url,
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to analyze body composition. Please try again.';
+    if (error.message?.includes('Network request failed')) {
+      errorMessage = 'Network error: Unable to connect to the server. Please check your internet connection and ensure the backend is deployed.';
+    } else if (error.message?.includes('timeout')) {
+      errorMessage = 'Request timeout: The server took too long to respond. Please try again.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Failed to analyze body composition. Please try again.',
+      error: errorMessage,
     };
   }
 }

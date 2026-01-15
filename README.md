@@ -1,4 +1,4 @@
-# ShredAI V2
+# ShredzAI
 
 A React Native iOS app that calculates body fat percentage using AI-powered image analysis combined with user survey data.
 
@@ -33,7 +33,7 @@ A React Native iOS app that calculates body fat percentage using AI-powered imag
 1. **Clone the repository**
    ```bash
    git clone <your-repo-url>
-   cd ShredAI-V2
+   cd ShredAI
    ```
 
 2. **Install dependencies**

@@ -15,11 +15,16 @@ export const API_CONFIG = {
 // Get current environment
 // In React Native, use __DEV__ instead of NODE_ENV
 export const getApiConfig = () => {
-  // __DEV__ is true in development, false in production builds
-  if (__DEV__) {
-    return API_CONFIG.development;
-  }
+  // For React Native, always use production URL since localhost won't work on physical devices
+  // If you need to test with local backend, use a tool like ngrok or update this to check device type
+  // For now, always use production to ensure it works on physical devices
   return API_CONFIG.production;
+  
+  // Uncomment below if you want to use localhost when running in simulator/emulator
+  // if (__DEV__) {
+  //   return API_CONFIG.development;
+  // }
+  // return API_CONFIG.production;
 };
 
 // API Endpoints

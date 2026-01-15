@@ -140,13 +140,24 @@ export default function LoadingScreen() {
         }, 1000);
         
       } catch (error: any) {
-        console.error('Error during AI analysis:', error);
+        // Log error properly (don't render error objects)
+        const errorMessage = error?.message || error?.toString() || 'Network request failed';
+        console.error('Error during AI analysis:', errorMessage);
+        console.error('Error details:', {
+          message: errorMessage,
+          name: error?.name,
+          stack: error?.stack,
+        });
         setIsAnalyzing(false);
         
-        // Show error alert
+        // Show user-friendly error message
+        const userMessage = errorMessage.includes('Network request failed')
+          ? 'Unable to connect to the server. Please check your internet connection and try again.'
+          : errorMessage || 'Failed to analyze body composition. Please try again.';
+        
         Alert.alert(
           'Analysis Error',
-          error.message || 'Failed to analyze body composition. Please try again.',
+          userMessage,
           [
             {
               text: 'Try Again',

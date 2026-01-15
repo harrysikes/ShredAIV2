@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -28,6 +29,22 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Listen for keyboard show/hide to prevent layout shifts
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleAuth = async () => {
     console.log('[AUTH SCREEN DEBUG] handleAuth called:', { isSignUp, email: email ? 'provided' : 'missing', hasPassword: !!password });
@@ -118,13 +135,21 @@ export default function AuthScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <View style={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            keyboardVisible && styles.scrollContentKeyboardVisible
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
           <Text style={styles.title}>ShredAI</Text>
           <Text style={styles.subtitle}>
             {isSignUp ? 'Create your account' : 'Sign in to continue'}
@@ -205,9 +230,10 @@ export default function AuthScreen() {
                 : "Don't have an account? Sign up"}
             </Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -216,11 +242,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingTop: 100,
+    paddingBottom: 40,
+  },
+  scrollContentKeyboardVisible: {
+    paddingTop: 40, // Reduce top padding when keyboard is visible
+  },
+  content: {
+    width: '100%',
   },
   title: {
     fontSize: 42,

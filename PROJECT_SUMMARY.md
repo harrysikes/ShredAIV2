@@ -1,8 +1,8 @@
-# 🎯 ShredAI V2 - Project Summary
+# 🎯 ShredzAI - Project Summary
 
 ## 📱 Project Overview
 
-**ShredAI V2** is a React Native iOS app that calculates body fat percentage using AI-powered image analysis combined with user survey data. The app uses OpenAI's GPT-4o Vision API to analyze photos and provides personalized workout plans.
+**ShredzAI** is a React Native iOS app that calculates body fat percentage using AI-powered image analysis combined with user survey data. The app uses OpenAI's GPT-4o Vision API to analyze photos and provides personalized workout plans.
 
 ---
 
@@ -114,7 +114,7 @@
 ## 📂 Project Structure
 
 ```
-ShredAI V2/
+ShredAI/
 ├── api/                    # Frontend API services
 │   ├── config.ts          # API configuration (production URL set)
 │   ├── bodyFatApi.ts      # Body fat calculation

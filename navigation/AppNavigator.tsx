@@ -82,12 +82,24 @@ export default function AppNavigator() {
       return;
     }
 
-    // Don't check the same route twice in a row (prevents unnecessary checks)
-    if (currentRouteName === lastCheckedRouteRef.current) {
+    // Always allow navigation check when auth state changes
+    // Only skip if we're checking the same route AND auth state hasn't changed
+    const shouldSkip = currentRouteName === lastCheckedRouteRef.current && 
+                       currentRouteName !== 'Auth'; // Always check Auth screen when auth state changes
+    
+    if (shouldSkip) {
       console.log('[NAV DEBUG] Same route as last check, skipping');
       return;
     }
-    lastCheckedRouteRef.current = currentRouteName;
+    
+    // Update last checked route, but reset it if we're authenticated and on Auth screen
+    // This ensures we always check navigation when auth state changes
+    if (isAuthenticated && currentRouteName === 'Auth') {
+      console.log('[NAV DEBUG] Authenticated on Auth screen - will navigate to Home');
+      lastCheckedRouteRef.current = null; // Reset to force navigation
+    } else {
+      lastCheckedRouteRef.current = currentRouteName;
+    }
 
     // Add a delay to ensure navigation has fully completed
     const timeoutId = setTimeout(() => {

@@ -1,12 +1,12 @@
-# ShredAI – Privacy Policy
+# ShredzAI – Privacy Policy
 
 **Version 1.0**  
 **Last Updated: February 16, 2025**  
 **Effective Date: February 16, 2025**
 
-ShredAI ("ShredAI," "we," "our," or "us") provides an AI-powered body composition analysis mobile application (the "App"). We are committed to protecting your privacy and handling your personal information responsibly, transparently, and in compliance with global privacy laws, including the **General Data Protection Regulation (GDPR)**, the **California Consumer Privacy Act (CCPA)**, and applicable international data protection regulations.
+ShredzAI ("ShredzAI," "we," "our," or "us") provides an AI-powered body composition analysis mobile application (the "App"). We are committed to protecting your privacy and handling your personal information responsibly, transparently, and in compliance with global privacy laws, including the **General Data Protection Regulation (GDPR)**, the **California Consumer Privacy Act (CCPA)**, and applicable international data protection regulations.
 
-By using ShredAI, you agree to the practices described in this Privacy Policy. If you do not agree, please discontinue use of the App.
+By using ShredzAI, you agree to the practices described in this Privacy Policy. If you do not agree, please discontinue use of the App.
 
 ---
 
